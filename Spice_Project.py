@@ -1,0 +1,159 @@
+#!/usr/bin/env python
+
+####Created by Denny C. Ng on Feb 23, 2015
+#Copyright @Tsinghua University
+
+import sys, os, os.path, shutil
+from datetime import date, time, datetime, timedelta
+import time
+
+
+
+s = os.sep
+root = "/home/chaowu/spice/buffer"
+spiceRoot = "/home/chaowu/data/spice/usage_statistics"
+
+def log(records):
+    #print 'start file classfing job...'
+    try:
+        file_object = file(spiceRoot + '/datalog.log','a')
+        file_object.write(records + '\n')
+    finally:
+        file_object.close()
+
+
+
+def isPathExist(rootPath, name):
+    if os.path.isdir(rootPath + '/' + name):
+        pass
+    else:
+        os.mkdir(rootPath + '/' + name)
+
+def writeFile(file, str):
+    fp = open(file, 'a+')
+    fp.write(str + '\n')        
+    fp.close()
+    
+
+def writeUserActionFile(path, action, behavior):
+    if action == 'Words':
+        writeFile(path + '/' + 'Subscribe_History.txt', behavior )
+    elif action == 'Preview':
+        writeFile(path + '/' + 'Subscribe_History.txt', behavior )
+    elif action == 'Clicked':
+        writeFile(path + '/' + 'Subscribe_History.txt', behavior )
+    elif action == 'Favor':
+        writeFile(path + '/' + 'Favorite_History.txt', behavior )
+    elif action == 'Unfavor':
+        writeFile(path + '/' + 'Favorite_History.txt', behavior )
+    elif action == 'Visit':
+        writeFile(path + '/' + 'Link_Clicked_History.txt', behavior ) 
+    elif action == 'Refresh':
+        writeFile(path + '/' + 'Refresh_History.txt', behavior ) 
+    elif action == 'Tweet':
+        writeFile(path + '/' + 'Publish_History.txt', behavior ) 
+    elif action == 'Media':
+        writeFile(path + '/' + 'Publish_History.txt', behavior )
+    
+def readFileinRow(mFile, storePath, fileType):
+    file = open(mFile)
+    for line in file:
+        if fileType == 'Network':
+            writeFile(storePath + '/' + 'Network.txt', line)
+        elif fileType == 'onWiFi':
+            writeFile(storePath + '/' + 'onWiFi.txt', line)
+        elif fileType == 'onLaunch':
+            writeFile(storePath + '/' + 'onLaunch.txt', line)
+        elif fileType == 'Location':
+            writeFile(storePath + '/' + 'Location.txt', line)
+        elif fileType == 'App':
+            writeFile(storePath + '/' + 'App.txt', line)
+        else:
+            action = line.split(',')[1]
+            writeUserActionFile(storePath, action, line)
+    file.close()
+    
+        
+        
+def fileDistribution(profile, uuid, fType):
+    #shutil.copyfile(root + '/' + profile, spiceRoot + '/SourceFile/' + profile)
+    #shutil.copyfile(root + '/' + profile, spiceRoot + '/' + newProfile)
+    #os.remove(root + '/' + profile)
+    readFileinRow(root + '/' + profile, spiceRoot + '/' + uuid + '/' + fType, fType)
+    os.remove(root + '/' + profile)
+
+
+def SOURCE_FILE_HANDLE():
+    #isPathExist(spiceRoot, 'SourceFile')
+    for name in os.listdir(root):
+        if os.path.isfile(os.path.join(root,name)):
+            if len(name.split('-')) > 1:
+                log('[handle file]: ' + name)
+                fileTime = name.split('-')[0]
+                fileName = name.split('-')[1]
+                machineUUID = fileName.split('_')[0]
+                isPathExist(spiceRoot, machineUUID)
+                fileType = fileName.split('_')[1]
+                isPathExist(spiceRoot, machineUUID + '/' + fileType)
+                fileDistribution(name , machineUUID, fileType)
+
+    
+
+def runTask(func, day=0, hour=0, min=0, second=0):
+  # get current time 
+  now = datetime.now()
+  strnow = now.strftime('%Y-%m-%d %H:%M:%S')
+  print "now:",strnow
+  #log('[task start] on ' + strnow)
+  # get net_run time
+  period = timedelta(days=day, hours=hour, minutes=min, seconds=second)
+  next_time = now + period
+  strnext_time = next_time.strftime('%Y-%m-%d %H:%M:%S')
+  print "next run:",strnext_time
+  func()
+  #log('[task done] on ' +  datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+  while True:
+      time.sleep(1)
+      now = datetime.now()
+      strnow = now.strftime('%Y-%m-%d %H:%M:%S')
+      # if system time eq next_time run the specific task(hello func)
+      if str(strnow) == str(strnext_time):
+          log('[task start] on ' + strnow)
+          print 'Task start....'
+          print "now:",strnow
+          print "next run on",(now+period).strftime('%Y-%m-%d %H:%M:%S')
+          func()
+          print "task done."
+          strnext_time = (now + period).strftime('%Y-%m-%d %H:%M:%S')
+          log('[task done] on ' +  datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+
+if __name__ == "__main__":
+    # do the UNIX double-fork magic, see Stevens' "Advanced 
+    # Programming in the UNIX Environment" for details (ISBN 0201563177)
+    try: 
+        pid = os.fork() 
+        if pid > 0:
+            # exit first parent
+            sys.exit(0) 
+    except OSError, e: 
+        print >>sys.stderr, "fork #1 failed: %d (%s)" % (e.errno, e.strerror) 
+        sys.exit(1)
+    # decouple from parent environment
+    os.chdir("/") 
+    os.setsid() 
+    os.umask(0) 
+    # do second fork
+    try: 
+        pid = os.fork() 
+        if pid > 0:
+            # exit from second parent, print eventual PID before
+            print "Daemon PID %d" % pid
+            log("Daemon PID %d" % pid) 
+            sys.exit(0) 
+    except OSError, e: 
+        print >>sys.stderr, "fork #2 failed: %d (%s)" % (e.errno, e.strerror) 
+        sys.exit(1) 
+    # start the daemon main loop
+    #main()
+    runTask(SOURCE_FILE_HANDLE, min = 1) 
+
