@@ -41,15 +41,17 @@ def isPathExist(rootPath, name):
 def writeFile(file, str):
     try:
         fp = open(file, 'a')
-        fp.write(str)        
-    finally:
+        fp.write(str) 
+    finally:       
         fp.close()
     
 
 def writeUserActionFile(path, action, behavior):
     if action == 'Words':
         writeFile(path + '/' + 'Subscribe_History.txt', behavior )
-    elif action == 'Preview':
+    elif action == 'PreviewM':
+        writeFile(path + '/' + 'Subscribe_History.txt', behavior )
+    elif action == 'PreviewO':
         writeFile(path + '/' + 'Subscribe_History.txt', behavior )
     elif action == 'Clicked':
         writeFile(path + '/' + 'Subscribe_History.txt', behavior )
@@ -65,7 +67,14 @@ def writeUserActionFile(path, action, behavior):
         writeFile(path + '/' + 'Publish_History.txt', behavior ) 
     elif action == 'Media':
         writeFile(path + '/' + 'Publish_History.txt', behavior )
-    
+    elif action == 'Retweet':
+        writeFile(path + '/' + 'Publish_History.txt', behavior )
+    elif action == 'RetweetM':                                 
+        writeFile(path + '/' + 'Publish_History.txt', behavior )
+    elif action == 'RetweetO':                                 
+        writeFile(path + '/' + 'Publish_History.txt', behavior )  
+
+
 def readFileinRow(mFile, storePath, fileType):
     file = open(mFile)
     for line in file:
