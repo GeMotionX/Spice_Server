@@ -27,7 +27,7 @@ experimentRoot = '/home/chaowu/data/spice/experiment'
 ############### MYSQL DATABASE  HANDELER SOURCE CODE ####################
 
 def dbTest():
-        db = MySQLdb.connect("localhost","user","passwd","db")
+        db = MySQLdb.connect("localhost","root","chaowu","spice")
         cursor = db.cursor()
         cursor.execute("SELECT VERSION()")
         data = cursor.fetchone()
@@ -36,7 +36,7 @@ def dbTest():
         
         
 def dbSelection(twitter_id, rec_uuid):
-        db = MySQLdb.connect("localhost","user","passwd","db")
+        db = MySQLdb.connect("localhost","root","chaowu","spice")
         cursor = db.cursor()
         
         sql = "SELECT * FROM TWIDERE \
@@ -67,7 +67,7 @@ def dbSelection(twitter_id, rec_uuid):
                 db.close()
         
 def dbSelectUUID(twitter_id):
-        db = MySQLdb.connect("localhost","user","passwd","db")
+        db = MySQLdb.connect("localhost","root","chaowu","spice")
         cursor = db.cursor()
         
         sql = "SELECT * FROM TWIDERE \
@@ -87,7 +87,7 @@ def dbSelectUUID(twitter_id):
                 db.close()
 
 def dbSelectTwitter(device_uuid):
-        db = MySQLdb.connect("localhost","user","passwd","db")
+        db = MySQLdb.connect("localhost","root","chaowu","spice")
         cursor = db.cursor()
         
         sql = "SELECT * FROM TWIDERE \
@@ -109,7 +109,7 @@ def dbSelectTwitter(device_uuid):
                 
                 
 def dbInsertion(twitter_id, device_id):
-        db = MySQLdb.connect("localhost","user","passwd","db")
+        db = MySQLdb.connect("localhost","root","chaowu","spice")
         cursor = db.cursor()
         
         sql = "INSERT INTO TWIDERE(twitter, \
@@ -143,7 +143,7 @@ def getUUIDbyTwitter(twitter_id):
   
               
 def isTwitterExist(twitter_id):
-        db = MySQLdb.connect("localhost","user","passwd","db")
+        db = MySQLdb.connect("localhost","root","chaowu","spice")
         cursor = db.cursor()
         
         sql = "SELECT * FROM TWIDERE \
@@ -281,6 +281,12 @@ def typeHandler(file_type, uuid):
         else:
                 return uuid
 
+def isProfile(fileType):
+        if fileType == 'App' or fileType == 'Location' or fileType == 'Network' or fileType == 'onLaunch' or fileType == 'onWifi' or fileType == 'EXP':
+                return False
+        else:
+                return True
+
 
 def SOURCE_FILE_HANDLE():
         #isPathExist(spiceRoot, 'SourceFile')
@@ -291,11 +297,12 @@ def SOURCE_FILE_HANDLE():
                     fileTime = name.split('-')[0]
                     fileName = name.split('-')[1]
                     machineUUID = fileName.split('_')[0]
-                    if machineUUID == 'unknown':
-                            fileMoveDirectly(name)
-                            continue
+                   
                     #isPathExist(spiceRoot, machineUUID)
                     fileType = fileName.split('_')[1]
+                    if machineUUID == 'unknown' and isProfile(fileType) == False:
+                            fileMoveDirectly(name)
+                            continue
                     #get accurate UUID from MySQL database Table TWIDERE
                     if fileType == 'App' or fileType == 'Location' or fileType == 'Network' or fileType == 'onLaunch' or fileType == 'onWifi' or fileType == 'EXP':
                            ret_of_UUID =  typeHandler(fileType, machineUUID)
