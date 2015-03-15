@@ -1,3 +1,4 @@
+# encoding: utf-8
 #!/usr/bin/env python
 
 ####Created by Denny C. Ng on Feb 23, 2015
@@ -7,6 +8,7 @@ import sys, os, os.path, shutil
 from datetime import date, time, datetime, timedelta
 import time
 
+import MySQLdb
 
 
 s = os.sep
@@ -22,166 +24,364 @@ experimentRoot = '/home/chaowu/data/spice/experiment'
 #backupRoot = "/Users/Chao/Code/PythonDeamon/source_files"
 #experimentRoot = '/Users/Chao/Code/PythonDeamon/experiment'
 
-def log(records):
-    #print 'start file classfing job...'
-    try:
-        file_object = file(spiceRoot + '/datalog.log','a')
-        file_object.write(records + '\n')
-    finally:
-        file_object.close()
+############### MYSQL DATABASE  HANDELER SOURCE CODE ####################
 
+def dbTest():
+        db = MySQLdb.connect("localhost","user","passwd","db")
+        cursor = db.cursor()
+        cursor.execute("SELECT VERSION()")
+        data = cursor.fetchone()
+        print "Database version : %s " % data
+        db.close()
+        
+        
+def dbSelection(twitter_id, rec_uuid):
+        db = MySQLdb.connect("localhost","user","passwd","db")
+        cursor = db.cursor()
+        
+        sql = "SELECT * FROM TWIDERE \
+               WHERE twitter = '%s'" % (twitter_id)
+        try:
+           cursor.execute(sql)
+           results = cursor.fetchall()
+           if results is not None:
+                   for row in results:
+                           ac_id = row[0]
+                           dev_id = row[1]
+                           ck_in = row[2]
+                           #print "Twitter_ID=%s,UUID=%s,Check_in=%s" % \
+                           #       (ac_id, dev_id, ck_in)
+                           if rec_uuid == dev_id:
+                                   #find the twitter and the device uuid in the database
+                                   return 0
+                           else:
+                                   #find the twitter, but cannot find the device uuid in the database
+                                   return 1    
+                                     
+        except:
+           print "Error: unable to fecth data"
+           #database or table errors
+           return 2
+       
+        finally:
+                db.close()
+        
+def dbSelectUUID(twitter_id):
+        db = MySQLdb.connect("localhost","user","passwd","db")
+        cursor = db.cursor()
+        
+        sql = "SELECT * FROM TWIDERE \
+               WHERE twitter = '%s'" % (twitter_id)
+        try:
+           cursor.execute(sql)
+           results = cursor.fetchall()
+           if results is not None:
+                   for row in results:
+                           return row[1]  
+                                     
+        except:
+           print "Error: unable to fecth data"
+           #database or table errors
+       
+        finally:
+                db.close()
+
+def dbSelectTwitter(device_uuid):
+        db = MySQLdb.connect("localhost","user","passwd","db")
+        cursor = db.cursor()
+        
+        sql = "SELECT * FROM TWIDERE \
+               WHERE uuid = '%s'" % (device_uuid)
+        try:
+           cursor.execute(sql)
+           results = cursor.fetchall()
+           if results is not None:
+                   for row in results:
+                           return row[0]  
+                                     
+        except:
+           print "Error: unable to fecth data"
+           #database or table errors
+       
+        finally:
+                db.close()
+        
+                
+                
+def dbInsertion(twitter_id, device_id):
+        db = MySQLdb.connect("localhost","user","passwd","db")
+        cursor = db.cursor()
+        
+        sql = "INSERT INTO TWIDERE(twitter, \
+               uuid, check_in) \
+               VALUES ('%s', '%s', CURDATE())" % \
+               (twitter_id, device_id)
+        try:
+           cursor.execute(sql)
+           db.commit()
+        except:
+           # Rollback in case there is any error
+           db.rollback()
+           
+        db.close()
+        
+
+                        
+def getTwitterByUUID(device_id):
+        res = dbSelectTwitter(device_id)
+        if res is not None:
+                return res
+        elif res is None:
+                return None
+
+def getUUIDbyTwitter(twitter_id):
+        res = dbSelectUUID(twitter_id)
+        if res is not None:
+                return res
+        elif res is None:
+                return None
+  
+              
+def isTwitterExist(twitter_id):
+        db = MySQLdb.connect("localhost","user","passwd","db")
+        cursor = db.cursor()
+        
+        sql = "SELECT * FROM TWIDERE \
+               WHERE twitter = '%s'" % (twitter_id)
+        try:
+           cursor.execute(sql)
+           results = cursor.fetchall()
+           if results is not None:
+                   return results[0]
+           else:
+                   return None 
+                                     
+        except:
+           print "Error: unable to fecth data"
+           #database or table errors
+        
+        db.close()
+                
+   
+def isPairExist(twitter_id, device_id):
+        res = dbSelection(twitter_id, device_id)
+        if res is None:
+                #dbInsertion(twitter_id, device_id)
+                #return device_id
+                return None
+        elif res is not None:
+                if res == 0:
+                        #return device_id
+                        return 0
+                elif res == 1:
+                        #return dbSelectUUID(twitter_id) 
+                        return 1    
+
+
+#########################################################################
+
+
+####################FILE HANDLER SOURCE CODE##############################
+
+def log(records):
+        #print 'start file classfing job...'
+        try:
+            file_object = file(spiceRoot + '/datalog.log','a')
+            file_object.write(records + '\n')
+        finally:
+            file_object.close()
 
 
 def isPathExist(rootPath, name):
-    if os.path.isdir(rootPath + '/' + name):
-        pass
-    else:
-        os.mkdir(rootPath + '/' + name)
+        if os.path.isdir(rootPath + '/' + name):
+            pass
+        else:
+            os.mkdir(rootPath + '/' + name)
+
 
 def writeFile(file, str):
-    try:
-        fp = open(file, 'a')
-        fp.write(str) 
-    finally:       
-        fp.close()
+        try:
+            fp = open(file, 'a')
+            fp.write(str) 
+        finally:       
+            fp.close()
+
     
 
 def writeUserActionFile(path, action, behavior):
-    if action == 'Words':
-        writeFile(path + '/' + 'Subscribe_History.txt', behavior )
-    elif action == 'PreviewM':
-        writeFile(path + '/' + 'Subscribe_History.txt', behavior )
-    elif action == 'PreviewO':
-        writeFile(path + '/' + 'Subscribe_History.txt', behavior )
-    elif action == 'Clicked':
-        writeFile(path + '/' + 'Subscribe_History.txt', behavior )
-    elif action == 'Favor':
-        writeFile(path + '/' + 'Favorite_History.txt', behavior )
-    elif action == 'Unfavor':
-        writeFile(path + '/' + 'Favorite_History.txt', behavior )
-    elif action == 'Visit':
-        writeFile(path + '/' + 'Link_Clicked_History.txt', behavior ) 
-    elif action == 'Refresh':
-        writeFile(path + '/' + 'Refresh_History.txt', behavior ) 
-    elif action == 'Tweet':
-        writeFile(path + '/' + 'Publish_History.txt', behavior ) 
-    elif action == 'Media':
-        writeFile(path + '/' + 'Publish_History.txt', behavior )
-    elif action == 'Retweet':
-        writeFile(path + '/' + 'Publish_History.txt', behavior )
-    elif action == 'RetweetM':                                 
-        writeFile(path + '/' + 'Publish_History.txt', behavior )
-    elif action == 'RetweetO':                                 
-        writeFile(path + '/' + 'Publish_History.txt', behavior )  
+        if action == 'Words':
+            writeFile(path + '/' + 'Subscribe_History.txt', behavior )
+        elif action == 'Preview':
+            writeFile(path + '/' + 'Subscribe_History.txt', behavior )
+        elif action == 'PreviewM':
+            writeFile(path + '/' + 'Subscribe_History.txt', behavior )
+        elif action == 'PreviewO':
+            writeFile(path + '/' + 'Subscribe_History.txt', behavior )
+        elif action == 'Clicked':
+            writeFile(path + '/' + 'Subscribe_History.txt', behavior )
+        elif action == 'Favor':
+            writeFile(path + '/' + 'Favorite_History.txt', behavior )
+        elif action == 'Unfavor':
+            writeFile(path + '/' + 'Favorite_History.txt', behavior )
+        elif action == 'Visit':
+            writeFile(path + '/' + 'Link_Clicked_History.txt', behavior ) 
+        elif action == 'Refresh':
+            writeFile(path + '/' + 'Refresh_History.txt', behavior ) 
+        elif action == 'Tweet':
+            writeFile(path + '/' + 'Publish_History.txt', behavior ) 
+        elif action == 'Media':
+            writeFile(path + '/' + 'Publish_History.txt', behavior )
+        elif action == 'Retweet':
+            writeFile(path + '/' + 'Publish_History.txt', behavior )
+        elif action == 'RetweetM':                                 
+            writeFile(path + '/' + 'Publish_History.txt', behavior )
+        elif action == 'RetweetO':                                 
+            writeFile(path + '/' + 'Publish_History.txt', behavior )
+ 
 
 
 def readFileinRow(mFile, storePath, fileType):
-    file = open(mFile)
-    for line in file:
-        if fileType == 'Network':
-            writeFile(storePath + '/' + 'Network.txt', line)
-        elif fileType == 'onWiFi':
-            writeFile(storePath + '/' + 'onWiFi.txt', line)
-        elif fileType == 'onLaunch':
-            writeFile(storePath + '/' + 'onLaunch.txt', line)
-        elif fileType == 'Location':
-            writeFile(storePath + '/' + 'Location.txt', line)
-        elif fileType == 'App':
-            writeFile(storePath + '/' + 'App.txt', line)
-        else:
-            action = line.split(',')[1]
-            writeUserActionFile(storePath, action, line)
-    file.close()
-    
+        file = open(mFile)
+        for line in file:
+            if fileType == 'Network':
+                writeFile(storePath + '/' + 'Network.txt', line)
+            elif fileType == 'onWiFi':
+                writeFile(storePath + '/' + 'onWiFi.txt', line)
+            elif fileType == 'onLaunch':
+                writeFile(storePath + '/' + 'onLaunch.txt', line)
+            elif fileType == 'Location':
+                writeFile(storePath + '/' + 'Location.txt', line)
+            elif fileType == 'App':
+                writeFile(storePath + '/' + 'App.txt', line)
+            else:
+                action = line.split(',')[1]
+                writeUserActionFile(storePath, action, line)
+        file.close()
         
         
 def fileDistribution(profile, uuid, fType):
-    shutil.copyfile(root + '/' + profile, backupRoot + '/' + profile)
-    #shutil.copyfile(root + '/' + profile, spiceRoot + '/' + newProfile)
-    #os.remove(root + '/' + profile)
-    readFileinRow(root + '/' + profile, spiceRoot + '/' + uuid + '/' + fType, fType)
-    os.remove(root + '/' + profile)
+        shutil.copyfile(root + '/' + profile, backupRoot + '/' + profile)                       
+        readFileinRow(root + '/' + profile, spiceRoot + '/' + uuid + '/' + fType, fType)        
+        os.remove(root + '/' + profile)
+
+
+def fileMoveDirectly(profile):
+        shutil.copyfile(root + '/' + profile, backupRoot + '/' + profile)       
+        os.remove(root + '/' + profile)
+
     
-def receivingExpFiles(profile):
-    shutil.copyfile(root + '/' + profile, experimentRoot + '/' + profile)
-    os.remove(root + '/' + profile)
+#def receivingExpFiles(profile):
+ #       shutil.copyfile(root + '/' + profile, experimentRoot + '/' + profile)
+  #      os.remove(root + '/' + profile)
+
+def typeHandler(file_type, uuid):
+        twitter = getTwitterByUUID(uuid)
+        if twitter is None:
+                return None
+        else:
+                return uuid
 
 
 def SOURCE_FILE_HANDLE():
-    #isPathExist(spiceRoot, 'SourceFile')
-    for name in os.listdir(root):
-        if os.path.isfile(os.path.join(root,name)):
-            if len(name.split('-')) > 1:
-                log('[handle file]: ' + name)
-                fileTime = name.split('-')[0]
-                fileName = name.split('-')[1]
-                machineUUID = fileName.split('_')[0]
-                isPathExist(spiceRoot, machineUUID)
-                fileType = fileName.split('_')[1]
-                #receiving experiment files
-                if fileType == 'EXP':
-                        receivingExpFiles(name)
-                        continue
-                isPathExist(spiceRoot, machineUUID + '/' + fileType)
-                fileDistribution(name , machineUUID, fileType)
+        #isPathExist(spiceRoot, 'SourceFile')
+        for name in os.listdir(root):
+            if os.path.isfile(os.path.join(root,name)):
+                if len(name.split('-')) > 1:
+                    log('[handle file]: ' + name)
+                    fileTime = name.split('-')[0]
+                    fileName = name.split('-')[1]
+                    machineUUID = fileName.split('_')[0]
+                    if machineUUID == 'unknown':
+                            fileMoveDirectly(name)
+                            continue
+                    #isPathExist(spiceRoot, machineUUID)
+                    fileType = fileName.split('_')[1]
+                    #get accurate UUID from MySQL database Table TWIDERE
+                    if fileType == 'App' or fileType == 'Location' or fileType == 'Network' or fileType == 'onLaunch' or fileType == 'onWifi' or fileType == 'EXP':
+                           ret_of_UUID =  typeHandler(fileType, machineUUID)
+                           if ret_of_UUID is not None:
+                                   pass
+                           elif ret_of_UUID is None:
+                                   fileMoveDirectly(name)
+                                   continue
+                                   #don't know the file from where
+                                       
+                    else:
+                            ret_of_Twitter = isTwitterExist(fileType)
+                            if ret_of_Twitter is None:
+                                    dbInsertion(fileType, machineUUID)
+                            elif ret_of_Twitter is not None:
+                                    ret =  isPairExist(fileType, machineUUID) 
+                                    if ret == 0:
+                                            pass
+                                    elif ret == 1:
+                                            machineUUID = getUUIDbyTwitter(fileType)
+                      
+                    #receiving experiment files
+                    isPathExist(spiceRoot, machineUUID)
+                    isPathExist(spiceRoot, machineUUID + '/' + fileType)
+                    fileDistribution(name , machineUUID, fileType)
+
 
     
 
 def runTask(func, day=0, hour=0, min=0, second=0):
-  # get current time 
-  now = datetime.now()
-  strnow = now.strftime('%Y-%m-%d %H:%M:%S')
-  print "now:",strnow
-  #log('[task start] on ' + strnow)
-  # get net_run time
-  period = timedelta(days=day, hours=hour, minutes=min, seconds=second)
-  next_time = now + period
-  strnext_time = next_time.strftime('%Y-%m-%d %H:%M:%S')
-  print "next run:",strnext_time
-  func()
-  #log('[task done] on ' +  datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
-  while True:
-      time.sleep(1)
-      now = datetime.now()
-      strnow = now.strftime('%Y-%m-%d %H:%M:%S')
-      # if system time eq next_time run the specific task(hello func)
-      if str(strnow) == str(strnext_time):
-          log('[task start] on ' + strnow)
-          print 'Task start....'
-          print "now:",strnow
-          print "next run on",(now+period).strftime('%Y-%m-%d %H:%M:%S')
-          func()
-          print "task done."
-          strnext_time = (now + period).strftime('%Y-%m-%d %H:%M:%S')
-          log('[task done] on ' +  datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+        # get current time 
+        now = datetime.now()
+        strnow = now.strftime('%Y-%m-%d %H:%M:%S')
+        print "now:",strnow
+        #log('[task start] on ' + strnow)
+        # get net_run time
+        period = timedelta(days=day, hours=hour, minutes=min, seconds=second)
+        next_time = now + period
+        strnext_time = next_time.strftime('%Y-%m-%d %H:%M:%S')
+        print "next run:",strnext_time
+        func()
+        #log('[task done] on ' +  datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+        while True:
+            time.sleep(1)
+            now = datetime.now()
+            strnow = now.strftime('%Y-%m-%d %H:%M:%S')
+            # if system time eq next_time run the specific task(hello func)
+            if str(strnow) == str(strnext_time):
+                log('[task start] on ' + strnow)
+                print 'Task start....'
+                print "now:",strnow
+                print "next run on",(now+period).strftime('%Y-%m-%d %H:%M:%S')
+                func()
+                print "task done."
+                strnext_time = (now + period).strftime('%Y-%m-%d %H:%M:%S')
+                log('[task done] on ' +  datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+
+#########################################################################
+
 
 if __name__ == "__main__":
-    # do the UNIX double-fork magic, see Stevens' "Advanced 
-    # Programming in the UNIX Environment" for details (ISBN 0201563177)
-    try: 
-        pid = os.fork() 
-        if pid > 0:
-            # exit first parent
-            sys.exit(0) 
-    except OSError, e: 
-        print >>sys.stderr, "fork #1 failed: %d (%s)" % (e.errno, e.strerror) 
-        sys.exit(1)
-    # decouple from parent environment
-    os.chdir("/") 
-    os.setsid() 
-    os.umask(0) 
-    # do second fork
-    try: 
-        pid = os.fork() 
-        if pid > 0:
-            # exit from second parent, print eventual PID before
-            print "Daemon PID %d" % pid
-            log("Daemon PID %d" % pid) 
-            sys.exit(0) 
-    except OSError, e: 
-        print >>sys.stderr, "fork #2 failed: %d (%s)" % (e.errno, e.strerror) 
-        sys.exit(1) 
-    # start the daemon main loop
-    #main()
-    runTask(SOURCE_FILE_HANDLE, day = 1) 
-
+        # do the UNIX double-fork magic, see Stevens' "Advanced 
+        # Programming in the UNIX Environment" for details (ISBN 0201563177)
+        try: 
+            pid = os.fork() 
+            if pid > 0:
+                # exit first parent
+                sys.exit(0) 
+        except OSError, e: 
+            print >>sys.stderr, "fork #1 failed: %d (%s)" % (e.errno, e.strerror) 
+            sys.exit(1)
+        # decouple from parent environment
+        os.chdir("/") 
+        os.setsid() 
+        os.umask(0) 
+        # do second fork
+        try: 
+            pid = os.fork() 
+            if pid > 0:
+                # exit from second parent, print eventual PID before
+                print "Daemon PID %d" % pid
+                log("Daemon PID %d" % pid) 
+                sys.exit(0) 
+        except OSError, e: 
+            print >>sys.stderr, "fork #2 failed: %d (%s)" % (e.errno, e.strerror) 
+            sys.exit(1) 
+        # start the daemon main loop
+        #main()
+        runTask(SOURCE_FILE_HANDLE, day = 1)
