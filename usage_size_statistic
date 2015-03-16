@@ -1,0 +1,260 @@
+#!/usr/bin/env python
+# encoding: utf-8
+
+####Created by Denny C. Ng on Mar 16, 2015
+#Copyright @Tsinghua University
+
+import sys, os, os.path
+import glob
+
+from datetime import date, time, datetime, timedelta
+import time
+
+import os
+from os.path import join, getsize
+
+import MySQLdb
+
+root = "path"
+
+MySQLAddr = 'addr'
+MySQLUser = 'usr'
+MySQLPass = 'pass'
+MySQLDB = 'db'
+
+############### MYSQL DATABASE  HANDELER SOURCE CODE ####################
+
+def dbTest():
+        db = MySQLdb.connect(MySQLAddr, MySQLUser , MySQLPass, MySQLDB)
+        cursor = db.cursor()
+        cursor.execute("SELECT VERSION()")
+        data = cursor.fetchone()
+        print "Database version : %s " % data
+        db.close()
+
+def isDeviceExist(uuid):
+        db = MySQLdb.connect(MySQLAddr, MySQLUser , MySQLPass, MySQLDB)
+        cursor = db.cursor()
+        
+        sql = "SELECT * FROM DEVICE_STATISTIC \
+               WHERE device = '%s'" % (uuid)
+        try:
+           cursor.execute(sql)
+           results = cursor.fetchall()
+           if results is not None:
+                   for row in results:
+                           return row[1]  
+           return None
+                                     
+        except:
+           print "Error: unable to fecth data"
+           #database or table errors
+           return None
+        finally:
+                db.close()
+    
+                
+def isTwitterExist(twitter, uuid):
+        db = MySQLdb.connect(MySQLAddr, MySQLUser , MySQLPass, MySQLDB)
+        cursor = db.cursor()
+        
+        sql = "SELECT * FROM TWITTER_STATISTIC \
+               WHERE twitter = '%s' AND in_device = '%s'" % (twitter, uuid)
+        try:
+           cursor.execute(sql)
+           results = cursor.fetchall()
+           if results is not None:
+                   for row in results:
+                           return row[0]  
+           return None               
+        except:
+           print "Error: unable to fecth data"
+           #database or table errors
+           return None
+        finally:
+                db.close()
+
+
+def dbDeviceUpdate(uuid, fsize):
+        db = MySQLdb.connect(MySQLAddr, MySQLUser , MySQLPass, MySQLDB)
+        cursor = db.cursor()
+        
+        sql = "UPDATE DEVICE_STATISTIC SET size_in_kb = '%s', last_update = now() \
+                                          WHERE device = '%s'" % \
+                                          (fsize, uuid)
+        try:
+           cursor.execute(sql)
+           db.commit()
+        except:
+           # Rollback in case there is any error
+           db.rollback()
+           
+        finally:
+                db.close()
+
+
+def dbTwitterUpdate(twitter_id, fsize, uuid):
+        db = MySQLdb.connect(MySQLAddr, MySQLUser , MySQLPass, MySQLDB)
+        cursor = db.cursor()
+        
+        sql = "UPDATE TWITTER_STATISTIC SET size_in_kb = '%s', last_update = now() \
+                                          WHERE twitter = '%s' AND in_device = '%s'" % \
+                                          (fsize, twitter_id, uuid)
+        try:
+           cursor.execute(sql)
+           db.commit()
+        except:
+           # Rollback in case there is any error
+           db.rollback()
+           
+        finally:
+                db.close()
+
+                
+def dbInsertDevice(uuid, fsize):
+        ret = isDeviceExist(uuid)
+        if ret is not None:
+                dbDeviceUpdate(uuid, fsize)
+                return 
+                
+        db = MySQLdb.connect(MySQLAddr, MySQLUser , MySQLPass, MySQLDB)
+        cursor = db.cursor()
+        
+        sql = "INSERT INTO DEVICE_STATISTIC(device, \
+               size_in_kb, last_update) \
+               VALUES ('%s', '%s', now())" % \
+               (uuid, fsize)
+        try:
+           cursor.execute(sql)
+           db.commit()
+        except:
+           # Rollback in case there is any error
+           db.rollback()
+           
+        finally:
+                db.close()
+                
+                
+def dbInsertTwitter(twitter_id, fsize, uuid):
+        ret = isTwitterExist(twitter_id, uuid)
+        if ret is not None:
+                dbTwitterUpdate(twitter_id, fsize, uuid)
+                return
+                
+        db = MySQLdb.connect(MySQLAddr, MySQLUser , MySQLPass, MySQLDB)
+        cursor = db.cursor()
+        
+        sql = "INSERT INTO TWITTER_STATISTIC(twitter, \
+               size_in_kb, in_device, last_update) \
+               VALUES ('%s', '%s', '%s', now())" % \
+               (twitter_id, fsize, uuid)
+        try:
+           cursor.execute(sql)
+           db.commit()
+        except:
+           # Rollback in case there is any error
+           db.rollback()
+           
+        finally:
+                db.close()
+        
+
+#########################################################################
+
+
+#########################FILE SIZE HANDLER ******************************
+
+def getdirsize(dir):
+        size = 0L
+        for root, dirs, files in os.walk(dir):
+           size += sum([getsize(join(root, name)) for name in files])
+        return size
+
+
+def getDevicesStatistic():
+        for dirName, subdirList, fileList  in os.walk(root):  
+                if len(dirName.split('/')) == 6:
+                        uuid = dirName.split('/')[5]
+                        filesize = getdirsize(dirName)
+                        dbInsertDevice(uuid, str(filesize))
+
+                        
+def getTwitterStatistic():
+        for dirName, subdirList, fileList  in os.walk(root):  
+                if len(dirName.split('/')) == 7:
+                        if dirName.split('/')[6].isdigit():
+                                uuid = dirName.split('/')[5]
+                                twitter = dirName.split('/')[6]
+                                filesize = getdirsize(dirName)
+                                dbInsertTwitter(twitter, str(filesize), uuid)
+                                
+
+############################################################################
+
+
+#################DEAMON AND FORK############################################
+                                
+def runTask(func, day=0, hour=0, min=0, second=0):
+        # get current time 
+        now = datetime.now()
+        strnow = now.strftime('%Y-%m-%d %H:%M:%S')
+        print "now:",strnow
+        #log('[task start] on ' + strnow)
+        # get net_run time
+        period = timedelta(days=day, hours=hour, minutes=min, seconds=second)
+        next_time = now + period
+        strnext_time = next_time.strftime('%Y-%m-%d %H:%M:%S')
+        print "next run:",strnext_time
+        func()
+        #log('[task done] on ' +  datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+        while True:
+            time.sleep(1)
+            now = datetime.now()
+            strnow = now.strftime('%Y-%m-%d %H:%M:%S')
+            # if system time eq next_time run the specific task(hello func)
+            if str(strnow) == str(strnext_time):        
+                print 'Task start....'
+                print "now:",strnow
+                print "next run on",(now+period).strftime('%Y-%m-%d %H:%M:%S')
+                func()
+                print "task done."
+                strnext_time = (now + period).strftime('%Y-%m-%d %H:%M:%S')
+                
+                
+
+def statistic_task():
+        getDevicesStatistic()
+        time.sleep(10)
+        getTwitterStatistic() 
+
+#########################################################################
+
+
+if __name__ == "__main__":
+        # do the UNIX double-fork magic, see Stevens' "Advanced 
+        # Programming in the UNIX Environment" for details (ISBN 0201563177)
+        try: 
+            pid = os.fork() 
+            if pid > 0:
+                # exit first parent
+                sys.exit(0) 
+        except OSError, e: 
+            print >>sys.stderr, "fork #1 failed: %d (%s)" % (e.errno, e.strerror) 
+            sys.exit(1)
+        # decouple from parent environment
+        os.chdir("/") 
+        os.setsid() 
+        os.umask(0) 
+        # do second fork
+        try: 
+            pid = os.fork() 
+            if pid > 0:
+                # exit from second parent, print eventual PID before
+                print "Daemon PID %d" % pid
+                sys.exit(0) 
+        except OSError, e: 
+            print >>sys.stderr, "fork #2 failed: %d (%s)" % (e.errno, e.strerror) 
+            sys.exit(1) 
+        # start the daemon main loop
+        #main()
+        runTask(statistic_task, day = 1)                   
