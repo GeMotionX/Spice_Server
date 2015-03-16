@@ -1,3 +1,34 @@
+#!/usr/bin/env python
+# encoding: utf-8
+
+####Created by Denny C. Ng on Mar 16, 2015
+#Copyright @Tsinghua University
+
+import sys, os, os.path
+import glob
+
+from datetime import date, time, datetime, timedelta
+import time
+
+import smtplib
+from email.mime.text import MIMEText
+
+import os
+from os.path import join, getsize
+
+import MySQLdb
+
+root = "path"
+
+MySQLAddr = 'addr'
+MySQLUser = 'usr'
+MySQLPass = 'pass'
+MySQLDB = 'db'
+
+_user = "xxx@qq.com"
+_pwd  = "ps"
+_to   = "xx@gmail.com"
+
 ############### MYSQL DATABASE  HANDELER SOURCE CODE ####################
 
 def dbTest():
