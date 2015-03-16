@@ -2,8 +2,7 @@
 # encoding: utf-8
 
 
-####Created by Denny C. Ng on Feb 23, 2015#####
-####Modified by Denny C. Ng on Mar 16, 2015####
+####Created by Denny C. Ng on Feb 23, 2015
 #Copyright @Tsinghua University
 
 import sys, os, os.path, shutil
@@ -15,25 +14,25 @@ import MySQLdb
 
 s = os.sep
 #rootpath on the server 'MotionX'
-root = "/home/user/spice/buffer"
-spiceRoot = "/home/user/data/spice/usage_statistics"
-backupRoot = "/home/user/data/spice/source_files"
-waitingRoot = "/home/user/spice/waiting"
-unknownRoot = "/home/user/data/spice/unknown_files"
-experimentRoot = '/home/user/data/spice/experiment'
+root = "/home/chaowu/spice/buffer"
+spiceRoot = "/home/chaowu/data/spice/usage_statistics"
+backupRoot = "/home/chaowu/data/spice/source_files"
+waitingRoot = "/home/chaowu/spice/waiting"
+unknownRoot = "/home/chaowu/data/spice/unknown_files"
+experimentRoot = '/home/chaowu/data/spice/experiment'
 
-MySQLAddr = 'localhost'
-MySQLUser = 'user'
+MySQLAddr = 'addr'
+MySQLUser = 'usr'
 MySQLPass = 'pass'
 MySQLDB = 'db'
 
 MAX_DEVICE_FOR_PER_USER = 5
 
 #rootpath on my Mac OS X
-#root = "/Users/user/Code/PythonDeamon/files"
-#spiceRoot = "/Users/user/Code/PythonDeamon/usage_statistics"
-#backupRoot = "/Users/user/Code/PythonDeamon/source_files"
-#experimentRoot = '/Users/user/Code/PythonDeamon/experiment'
+#root = "/Users/Chao/Code/PythonDeamon/files"
+#spiceRoot = "/Users/Chao/Code/PythonDeamon/usage_statistics"
+#backupRoot = "/Users/Chao/Code/PythonDeamon/source_files"
+#experimentRoot = '/Users/Chao/Code/PythonDeamon/experiment'
 
 ############### MYSQL DATABASE  HANDELER SOURCE CODE ####################
 
@@ -161,7 +160,8 @@ def isTwitterExist(twitter_id):
            cursor.execute(sql)
            results = cursor.fetchall()
            if results is not None:
-                   return results[0]
+                   for row in results:
+                           return row[0]
            else:
                    return None 
                                      
@@ -340,7 +340,7 @@ def waitingFileDistribution(profile, uuid, fType):
         os.remove(waitingRoot + '/' + profile)
         
         
-def fileMoveDirectly(profile):
+def fileMovetoWaiting(profile):
         shutil.copyfile(root + '/' + profile, waitingRoot + '/' + profile)    
         shutil.copyfile(root + '/' + profile, backupRoot + '/' + profile)       
         os.remove(root + '/' + profile)
@@ -351,6 +351,7 @@ def fileMoveToUnknown(profile):
 
         
 def fileMoveToUnknownDirectly(profile):
+        shutil.copyfile(root + '/' + profile, backupRoot + '/' + profile)
         shutil.copyfile(root + '/' + profile, unknownRoot + '/' + profile)       
         os.remove(root + '/' + profile)
 
@@ -364,7 +365,7 @@ def typeHandler(uuid):
         if twitter is None:
                 return None
         else:
-                return uuid
+                return twitter
 
 def isProfile(fileType):
         if fileType == 'App' or fileType == 'Location' or fileType == 'Network' or fileType == 'onLaunch' or fileType == 'onWifi' or fileType == 'EXP':
@@ -395,7 +396,7 @@ def SOURCE_FILE_HANDLE():
                            if ret_of_UUID is not None:
                                    pass
                            elif ret_of_UUID is None:
-                                   fileMoveDirectly(name)
+                                   fileMovetoWaiting(name)
                                    continue
                                    #don't know the file from where
                                        
@@ -437,7 +438,7 @@ def SOURCE_FILE_HANDLE():
                     fileTime = name.split('-')[0]
                     fileName = name.split('-')[1]
                     machineUUID = fileName.split('_')[0]
-                   
+                    fileType = fileName.split('_')[1]
                     #get accurate UUID from MySQL database Table TWIDERE
                     ret_of_UUID =  typeHandler(machineUUID)
                     if ret_of_UUID is not None:
