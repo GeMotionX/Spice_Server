@@ -1,7 +1,9 @@
-# encoding: utf-8
 #!/usr/bin/env python
+# encoding: utf-8
 
-####Created by Denny C. Ng on Feb 23, 2015
+
+####Created by Denny C. Ng on Feb 23, 2015#####
+####Modified by Denny C. Ng on Mar 16, 2015####
 #Copyright @Tsinghua University
 
 import sys, os, os.path, shutil
@@ -13,21 +15,30 @@ import MySQLdb
 
 s = os.sep
 #rootpath on the server 'MotionX'
-root = "/home/chaowu/spice/buffer"
-spiceRoot = "/home/chaowu/data/spice/usage_statistics"
-backupRoot = "/home/chaowu/data/spice/source_files"
-experimentRoot = '/home/chaowu/data/spice/experiment'
+root = "/home/user/spice/buffer"
+spiceRoot = "/home/user/data/spice/usage_statistics"
+backupRoot = "/home/user/data/spice/source_files"
+waitingRoot = "/home/user/spice/waiting"
+unknownRoot = "/home/user/data/spice/unknown_files"
+experimentRoot = '/home/user/data/spice/experiment'
+
+MySQLAddr = 'localhost'
+MySQLUser = 'user'
+MySQLPass = 'pass'
+MySQLDB = 'db'
+
+MAX_DEVICE_FOR_PER_USER = 5
 
 #rootpath on my Mac OS X
-#root = "/Users/Chao/Code/PythonDeamon/files"
-#spiceRoot = "/Users/Chao/Code/PythonDeamon/usage_statistics"
-#backupRoot = "/Users/Chao/Code/PythonDeamon/source_files"
-#experimentRoot = '/Users/Chao/Code/PythonDeamon/experiment'
+#root = "/Users/user/Code/PythonDeamon/files"
+#spiceRoot = "/Users/user/Code/PythonDeamon/usage_statistics"
+#backupRoot = "/Users/user/Code/PythonDeamon/source_files"
+#experimentRoot = '/Users/user/Code/PythonDeamon/experiment'
 
 ############### MYSQL DATABASE  HANDELER SOURCE CODE ####################
 
 def dbTest():
-        db = MySQLdb.connect("localhost","user","pass","db")
+        db = MySQLdb.connect(MySQLAddr, MySQLUser , MySQLPass, MySQLDB)
         cursor = db.cursor()
         cursor.execute("SELECT VERSION()")
         data = cursor.fetchone()
@@ -36,27 +47,24 @@ def dbTest():
         
         
 def dbSelection(twitter_id, rec_uuid):
-        db = MySQLdb.connect("localhost","user","pass","db")
+        db = MySQLdb.connect(MySQLAddr, MySQLUser , MySQLPass, MySQLDB)
         cursor = db.cursor()
         
         sql = "SELECT * FROM TWIDERE \
-               WHERE twitter = '%s'" % (twitter_id)
+               WHERE twitter = '%s'"  % (twitter_id)
         try:
            cursor.execute(sql)
            results = cursor.fetchall()
            if results is not None:
-                   for row in results:
-                           ac_id = row[0]
-                           dev_id = row[1]
-                           ck_in = row[2]
-                           #print "Twitter_ID=%s,UUID=%s,Check_in=%s" % \
-                           #       (ac_id, dev_id, ck_in)
-                           if rec_uuid == dev_id:
-                                   #find the twitter and the device uuid in the database
-                                   return 0
-                           else:
-                                   #find the twitter, but cannot find the device uuid in the database
-                                   return 1    
+               for row in results:
+                       if row[1] == rec_uuid:
+                           return 0
+                       else:
+                           continue
+                       
+               return 1
+           elif results is None:
+               return None  
                                      
         except:
            print "Error: unable to fecth data"
@@ -67,7 +75,7 @@ def dbSelection(twitter_id, rec_uuid):
                 db.close()
         
 def dbSelectUUID(twitter_id):
-        db = MySQLdb.connect("localhost","user","pass","db")
+        db = MySQLdb.connect(MySQLAddr, MySQLUser , MySQLPass, MySQLDB)
         cursor = db.cursor()
         
         sql = "SELECT * FROM TWIDERE \
@@ -87,7 +95,7 @@ def dbSelectUUID(twitter_id):
                 db.close()
 
 def dbSelectTwitter(device_uuid):
-        db = MySQLdb.connect("localhost","user","pass","db")
+        db = MySQLdb.connect(MySQLAddr, MySQLUser , MySQLPass, MySQLDB)
         cursor = db.cursor()
         
         sql = "SELECT * FROM TWIDERE \
@@ -109,7 +117,7 @@ def dbSelectTwitter(device_uuid):
                 
                 
 def dbInsertion(twitter_id, device_id):
-        db = MySQLdb.connect("localhost","user","pass","db")
+        db = MySQLdb.connect(MySQLAddr, MySQLUser , MySQLPass, MySQLDB)
         cursor = db.cursor()
         
         sql = "INSERT INTO TWIDERE(twitter, \
@@ -123,7 +131,8 @@ def dbInsertion(twitter_id, device_id):
            # Rollback in case there is any error
            db.rollback()
            
-        db.close()
+        finally:
+                db.close()
         
 
                         
@@ -143,7 +152,7 @@ def getUUIDbyTwitter(twitter_id):
   
               
 def isTwitterExist(twitter_id):
-        db = MySQLdb.connect("localhost","user","pass","db")
+        db = MySQLdb.connect(MySQLAddr, MySQLUser , MySQLPass, MySQLDB)
         cursor = db.cursor()
         
         sql = "SELECT * FROM TWIDERE \
@@ -160,7 +169,8 @@ def isTwitterExist(twitter_id):
            print "Error: unable to fecth data"
            #database or table errors
         
-        db.close()
+        finally:
+                db.close()
                 
    
 def isPairExist(twitter_id, device_id):
@@ -169,13 +179,73 @@ def isPairExist(twitter_id, device_id):
                 #dbInsertion(twitter_id, device_id)
                 #return device_id
                 return None
-        elif res is not None:
-                if res == 0:
-                        #return device_id
-                        return 0
-                elif res == 1:
-                        #return dbSelectUUID(twitter_id) 
-                        return 1    
+        else:
+                return res
+
+def getUUIDBindCount(twitter_id):
+        db = MySQLdb.connect(MySQLAddr, MySQLUser , MySQLPass, MySQLDB)
+        cursor = db.cursor()
+        sql = "SELECT COUNT(uuid) FROM TWIDERE \
+               WHERE twitter = '%s'" % (twitter_id)
+        try:
+           cursor.execute(sql)
+           results = cursor.fetchone()[0]
+           if results is not None:
+               return results
+           else:
+               return None
+                                     
+        except:
+           print "Error: unable to fecth data"
+           #database or table errors
+       
+        finally:
+                db.close()
+
+def insertUUIDMaping(origin, replaceUUID):
+        db = MySQLdb.connect(MySQLAddr, MySQLUser , MySQLPass, MySQLDB)
+        cursor = db.cursor()
+        
+        sql = "INSERT INTO UUIDMAP(original, \
+               maping) \
+               VALUES ('%s', '%s')" % \
+               (origin, replaceUUID)
+        try:
+           cursor.execute(sql)
+           db.commit()
+        except:
+           # Rollback in case there is any error
+           db.rollback()
+           
+        finally:
+                db.close()
+        
+    
+
+def isUUIDinMaping(uuid):
+        db = MySQLdb.connect(MySQLAddr, MySQLUser , MySQLPass, MySQLDB)
+        cursor = db.cursor()
+        
+        sql = "SELECT * FROM UUIDMAP \
+               WHERE original = '%s'" % (uuid)
+        try:
+           cursor.execute(sql)
+           results = cursor.fetchall()
+           if results is not None:
+                   for row in results:
+                           return row[1]
+           else:
+                   return None 
+                                     
+        except:
+           print "Error: unable to fecth data"
+           #database or table errors
+           return None
+        
+        finally:
+                db.close()
+        
+          
 
 
 #########################################################################
@@ -265,8 +335,23 @@ def fileDistribution(profile, uuid, fType):
         os.remove(root + '/' + profile)
 
 
+def waitingFileDistribution(profile, uuid, fType):                       
+        readFileinRow(waitingRoot + '/' + profile, spiceRoot + '/' + uuid + '/' + fType, fType)        
+        os.remove(waitingRoot + '/' + profile)
+        
+        
 def fileMoveDirectly(profile):
+        shutil.copyfile(root + '/' + profile, waitingRoot + '/' + profile)    
         shutil.copyfile(root + '/' + profile, backupRoot + '/' + profile)       
+        os.remove(root + '/' + profile)
+        
+def fileMoveToUnknown(profile):
+        shutil.copyfile(waitingRoot + '/' + profile, unknownRoot + '/' + profile)       
+        os.remove(waitingRoot + '/' + profile)
+
+        
+def fileMoveToUnknownDirectly(profile):
+        shutil.copyfile(root + '/' + profile, unknownRoot + '/' + profile)       
         os.remove(root + '/' + profile)
 
     
@@ -274,7 +359,7 @@ def fileMoveDirectly(profile):
  #       shutil.copyfile(root + '/' + profile, experimentRoot + '/' + profile)
   #      os.remove(root + '/' + profile)
 
-def typeHandler(file_type, uuid):
+def typeHandler(uuid):
         twitter = getTwitterByUUID(uuid)
         if twitter is None:
                 return None
@@ -290,22 +375,23 @@ def isProfile(fileType):
 
 def SOURCE_FILE_HANDLE():
         #isPathExist(spiceRoot, 'SourceFile')
+        
         for name in os.listdir(root):
             if os.path.isfile(os.path.join(root,name)):
                 if len(name.split('-')) > 1:
-                    log('[handle file]: ' + name)
+                    log('[handle file in buffer folder]: ' + name)
                     fileTime = name.split('-')[0]
                     fileName = name.split('-')[1]
                     machineUUID = fileName.split('_')[0]
                    
                     #isPathExist(spiceRoot, machineUUID)
                     fileType = fileName.split('_')[1]
-                    if machineUUID == 'unknown' and isProfile(fileType) == False:
-                            fileMoveDirectly(name)
+                    if machineUUID == 'unknown':
+                            fileMoveToUnknownDirectly(name)
                             continue
                     #get accurate UUID from MySQL database Table TWIDERE
                     if fileType == 'App' or fileType == 'Location' or fileType == 'Network' or fileType == 'onLaunch' or fileType == 'onWifi' or fileType == 'EXP':
-                           ret_of_UUID =  typeHandler(fileType, machineUUID)
+                           ret_of_UUID =  typeHandler(machineUUID)
                            if ret_of_UUID is not None:
                                    pass
                            elif ret_of_UUID is None:
@@ -321,14 +407,53 @@ def SOURCE_FILE_HANDLE():
                                     ret =  isPairExist(fileType, machineUUID) 
                                     if ret == 0:
                                             pass
-                                    elif ret == 1:
-                                            machineUUID = getUUIDbyTwitter(fileType)
-                      
+                                    elif ret == 1 or ret == None or ret ==2:                                           
+                                            deviceNum = getUUIDBindCount(fileType)
+                                            if deviceNum is not None:
+                                                    if deviceNum < MAX_DEVICE_FOR_PER_USER:
+                                                            dbInsertion(fileType, machineUUID)    
+                                                    else:
+                                                            maping_MachineUUID = getUUIDbyTwitter(fileType)
+                                                            insertUUIDMaping(machineUUID, maping_MachineUUID)
+                                                            machineUUID = maping_MachineUUID
+                                            elif deviceNum is None:
+                                                    dbInsertion(fileType, machineUUID)
+                                                
+                                                        
+                                            
                     #receiving experiment files
                     isPathExist(spiceRoot, machineUUID)
                     isPathExist(spiceRoot, machineUUID + '/' + fileType)
                     fileDistribution(name , machineUUID, fileType)
-
+        
+        time.sleep(5)
+       
+        ##### handl the waiting folder ##########
+        
+        for name in os.listdir(waitingRoot):
+            if os.path.isfile(os.path.join(waitingRoot,name)):
+                if len(name.split('-')) > 1:
+                    log('[handle file in waiting folder]: ' + name)
+                    fileTime = name.split('-')[0]
+                    fileName = name.split('-')[1]
+                    machineUUID = fileName.split('_')[0]
+                   
+                    #get accurate UUID from MySQL database Table TWIDERE
+                    ret_of_UUID =  typeHandler(machineUUID)
+                    if ret_of_UUID is not None:
+                            pass
+                    elif ret_of_UUID is None:
+                            ret = isUUIDinMaping(machineUUID)
+                            if ret is not None:
+                                    machineUUID = ret
+                            elif ret is None:
+                                    fileMoveToUnknown(name)
+                                    continue
+                                    #don't know the file from where                  
+                    #receiving experiment files
+                    isPathExist(spiceRoot, machineUUID)
+                    isPathExist(spiceRoot, machineUUID + '/' + fileType)
+                    waitingFileDistribution(name , machineUUID, fileType)
 
     
 
