@@ -1,34 +1,3 @@
-#!/usr/bin/env python
-# encoding: utf-8
-
-####Created by Denny C. Ng on Mar 17, 2015
-#Copyright @Tsinghua University
-
-import sys, os, os.path
-import glob
-
-from datetime import date, time, datetime, timedelta
-import time
-
-import smtplib
-from email.mime.text import MIMEText
-
-import os
-from os.path import join, getsize
-
-import MySQLdb
-
-root = "path
-
-MySQLAddr = 'addr'
-MySQLUser = 'usr'
-MySQLPass = 'pass'
-MySQLDB = 'db'
-
-_user = "xxx@qq.com"
-_pwd  = "pass"
-_to   = "x@gmail.com"
-
 ############### MYSQL DATABASE  HANDELER SOURCE CODE ####################
 
 def dbTest():
@@ -112,9 +81,11 @@ def sendMail(msg):
         s.sendmail(_user, _to, msg.as_string())
         s.close()
 
+def handlerTime(crTime):
+        return crTime[0:3] + '-' + crTime[4:5] + '-' + crTime[6:7] + '  ' + crTime[8:9] + ':' + crTime[10:11] + ':' + crTime[12:13] 
 
-def alarm(UUID, fType):
-        return '    Device [' + UUID +  '], File [' + fType + '] received on ' + datetime.now().strftime('%Y-%m-%d %H:%M:%S') + '\n'
+def alarm(UUID, fType, crTime):
+        return '    Device [' + UUID +  '], File [' + fType + '] received on ' + handlerTime(crTime) + '\n'
 
 
 def LUCIFER():
@@ -145,13 +116,9 @@ def runTask(func, day=0, hour=0, min=0, second=0):
         # get current time 
         now = datetime.now()
         strnow = now.strftime('%Y-%m-%d %H:%M:%S')
-        print "now:",strnow
-        #log('[task start] on ' + strnow)
-        # get net_run time
         period = timedelta(days=day, hours=hour, minutes=min, seconds=second)
         next_time = now + period
         strnext_time = next_time.strftime('%Y-%m-%d %H:%M:%S')
-        print "next run:",strnext_time
         func()
         #log('[task done] on ' +  datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
         while True:
@@ -159,12 +126,8 @@ def runTask(func, day=0, hour=0, min=0, second=0):
             now = datetime.now()
             strnow = now.strftime('%Y-%m-%d %H:%M:%S')
             # if system time eq next_time run the specific task(hello func)
-            if str(strnow) == str(strnext_time):        
-                print 'Task start....'
-                print "now:",strnow
-                print "next run on",(now+period).strftime('%Y-%m-%d %H:%M:%S')
+            if str(strnow) == str(strnext_time):                       
                 func()
-                print "task done."
                 strnext_time = (now + period).strftime('%Y-%m-%d %H:%M:%S')
                 
 #########################################################################
