@@ -79,7 +79,7 @@ def dbDeviceUpdate(uuid, fsize):
         db = MySQLdb.connect(MySQLAddr, MySQLUser , MySQLPass, MySQLDB)
         cursor = db.cursor()
         
-        sql = "UPDATE DEVICE_STATISTIC SET size_in_kb = '%s', last_update = now() \
+        sql = "UPDATE DEVICE_STATISTIC SET size_in_byte = '%d', last_update = now() \
                                           WHERE device = '%s'" % \
                                           (fsize, uuid)
         try:
@@ -97,7 +97,7 @@ def dbTwitterUpdate(twitter_id, fsize, uuid):
         db = MySQLdb.connect(MySQLAddr, MySQLUser , MySQLPass, MySQLDB)
         cursor = db.cursor()
         
-        sql = "UPDATE TWITTER_STATISTIC SET size_in_kb = '%s', last_update = now() \
+        sql = "UPDATE TWITTER_STATISTIC SET size_in_byte = '%d', last_update = now() \
                                           WHERE twitter = '%s' AND in_device = '%s'" % \
                                           (fsize, twitter_id, uuid)
         try:
@@ -121,8 +121,8 @@ def dbInsertDevice(uuid, fsize):
         cursor = db.cursor()
         
         sql = "INSERT INTO DEVICE_STATISTIC(device, \
-               size_in_kb, last_update) \
-               VALUES ('%s', '%s', now())" % \
+               size_in_byte, last_update) \
+               VALUES ('%s', '%d', now())" % \
                (uuid, fsize)
         try:
            cursor.execute(sql)
@@ -145,8 +145,8 @@ def dbInsertTwitter(twitter_id, fsize, uuid):
         cursor = db.cursor()
         
         sql = "INSERT INTO TWITTER_STATISTIC(twitter, \
-               size_in_kb, in_device, last_update) \
-               VALUES ('%s', '%s', '%s', now())" % \
+               size_in_byte, in_device, last_update) \
+               VALUES ('%s', '%d', '%s', now())" % \
                (twitter_id, fsize, uuid)
         try:
            cursor.execute(sql)
@@ -173,20 +173,20 @@ def getdirsize(dir):
 
 def getDevicesStatistic():
         for dirName, subdirList, fileList  in os.walk(root):  
-                if len(dirName.split('/')) == 6:
-                        uuid = dirName.split('/')[5]
+                if len(dirName.split('/')) == 7:
+                        uuid = dirName.split('/')[6]
                         filesize = getdirsize(dirName)
-                        dbInsertDevice(uuid, str(filesize))
+                        dbInsertDevice(uuid, filesize)
 
                         
 def getTwitterStatistic():
         for dirName, subdirList, fileList  in os.walk(root):  
-                if len(dirName.split('/')) == 7:
-                        if dirName.split('/')[6].isdigit():
-                                uuid = dirName.split('/')[5]
-                                twitter = dirName.split('/')[6]
+                if len(dirName.split('/')) == 8:
+                        if dirName.split('/')[7].isdigit():
+                                uuid = dirName.split('/')[6]
+                                twitter = dirName.split('/')[7]
                                 filesize = getdirsize(dirName)
-                                dbInsertTwitter(twitter, str(filesize), uuid)
+                                dbInsertTwitter(twitter, filesize, uuid)
                                 
 
 ############################################################################
@@ -229,7 +229,6 @@ def statistic_task():
 
 #########################################################################
 
-
 if __name__ == "__main__":
         # do the UNIX double-fork magic, see Stevens' "Advanced 
         # Programming in the UNIX Environment" for details (ISBN 0201563177)
@@ -258,3 +257,5 @@ if __name__ == "__main__":
         # start the daemon main loop
         #main()
         runTask(statistic_task, day = 1)                   
+
+        
