@@ -1,0 +1,202 @@
+#!/usr/bin/env python
+# encoding: utf-8
+
+####Created by Denny C. Ng on Mar 17, 2015
+#Copyright @Tsinghua University
+
+import sys, os, os.path
+import glob
+
+from datetime import date, time, datetime, timedelta
+import time
+
+import smtplib
+from email.mime.text import MIMEText
+
+import os
+from os.path import join, getsize
+
+import MySQLdb
+
+root = "path
+
+MySQLAddr = 'addr'
+MySQLUser = 'usr'
+MySQLPass = 'pass'
+MySQLDB = 'db'
+
+_user = "xxx@qq.com"
+_pwd  = "pass"
+_to   = "x@gmail.com"
+
+############### MYSQL DATABASE  HANDELER SOURCE CODE ####################
+
+def dbTest():
+        db = MySQLdb.connect(MySQLAddr, MySQLUser , MySQLPass, MySQLDB)
+        cursor = db.cursor()
+        cursor.execute("SELECT VERSION()")
+        data = cursor.fetchone()
+        print "Database version : %s " % data
+        db.close()
+
+        
+def dbInsert(crtime, uuid, type_of_file):
+        db = MySQLdb.connect(MySQLAddr, MySQLUser , MySQLPass, MySQLDB)
+        cursor = db.cursor()
+        
+        sql = "INSERT INTO LUCIFER(ctime, \
+               uuid, file) \
+               VALUES ('%s', '%s', '%s')" % \
+               (crtime, uuid, type_of_file)
+        try:
+           cursor.execute(sql)
+           db.commit()
+        except:
+           # Rollback in case there is any error
+           db.rollback()
+           
+        finally:
+                db.close()
+                
+def dbLUCIFERClear():
+        db = MySQLdb.connect(MySQLAddr, MySQLUser , MySQLPass, MySQLDB)
+        cursor = db.cursor()
+        
+        sql = "DELETE FROM LUCIFER"
+        try:
+           cursor.execute(sql)
+           db.commit()
+        except:
+           # Rollback in case there is any error
+           db.rollback()
+           
+        finally:
+                db.close()
+                
+def isInLUCIFER(crtime, uuid, type_of_file):
+        db = MySQLdb.connect(MySQLAddr, MySQLUser , MySQLPass, MySQLDB)
+        cursor = db.cursor()
+        
+        sql = "SELECT * FROM LUCIFER \
+               WHERE ctime = '%s' AND uuid = '%s' \
+               AND file = '%s'" % (crtime, uuid, type_of_file)
+        try:
+           cursor.execute(sql)
+           results = cursor.fetchall()
+           if results is not None:
+                   for row in results:
+                           return 0 
+           return None
+                                     
+        except:
+           print "Error: unable to fecth data"
+           #database or table errors
+           return None
+        finally:
+                db.close()
+                
+
+#########################################################################
+
+
+#########################FILE SIZE HANDLER ******************************
+
+def sendMail(msg):
+        msg = MIMEText(msg)
+        msg["Subject"] = '[' + datetime.now().strftime('%Y-%m-%d %H:%M:%S') + '] MotionX_SPICE files received'
+        msg["From"]    = _user
+        msg["To"]      = _to
+
+        s = smtplib.SMTP("smtp.qq.com", timeout=30)
+        s.login(_user, _pwd)
+        s.sendmail(_user, _to, msg.as_string())
+        s.close()
+
+
+def alarm(UUID, fType):
+        return '    Device [' + UUID +  '], File [' + fType + '] received on ' + datetime.now().strftime('%Y-%m-%d %H:%M:%S') + '\n'
+
+
+def LUCIFER():
+        file_number = 0
+        is_new_file = False
+        message_for_mail = 'New file received alarm: \n\n\n'
+        for name in os.listdir(root):
+                if os.path.isfile(os.path.join(root,name)):
+                        file_number += 1
+                        if len(name.split('-')) > 1:
+                                crTime = name.split('-')[0]
+                                spiceName = name.split('-')[1]
+                                UUID = spiceName.split('_')[0]
+                                fType = spiceName.split('_')[1]
+                                ret = isInLUCIFER(crTime, UUID, fType)
+                                if ret is None:
+                                        is_new_file = True
+                                        message_for_mail += alarm(UUID, fType)
+                                        dbInsert(crTime, UUID, fType)
+                                                     
+        if file_number == 0:
+                dbLUCIFERClear()
+        if is_new_file == True:
+                sendMail(message_for_mail)
+                
+
+def runTask(func, day=0, hour=0, min=0, second=0):
+        # get current time 
+        now = datetime.now()
+        strnow = now.strftime('%Y-%m-%d %H:%M:%S')
+        print "now:",strnow
+        #log('[task start] on ' + strnow)
+        # get net_run time
+        period = timedelta(days=day, hours=hour, minutes=min, seconds=second)
+        next_time = now + period
+        strnext_time = next_time.strftime('%Y-%m-%d %H:%M:%S')
+        print "next run:",strnext_time
+        func()
+        #log('[task done] on ' +  datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+        while True:
+            time.sleep(1)
+            now = datetime.now()
+            strnow = now.strftime('%Y-%m-%d %H:%M:%S')
+            # if system time eq next_time run the specific task(hello func)
+            if str(strnow) == str(strnext_time):        
+                print 'Task start....'
+                print "now:",strnow
+                print "next run on",(now+period).strftime('%Y-%m-%d %H:%M:%S')
+                func()
+                print "task done."
+                strnext_time = (now + period).strftime('%Y-%m-%d %H:%M:%S')
+                
+#########################################################################
+
+
+if __name__ == "__main__":
+        # do the UNIX double-fork magic, see Stevens' "Advanced 
+        # Programming in the UNIX Environment" for details (ISBN 0201563177)
+        try: 
+            pid = os.fork() 
+            if pid > 0:
+                # exit first parent
+                sys.exit(0) 
+        except OSError, e: 
+            print >>sys.stderr, "fork #1 failed: %d (%s)" % (e.errno, e.strerror) 
+            sys.exit(1)
+        # decouple from parent environment
+        os.chdir("/") 
+        os.setsid() 
+        os.umask(0) 
+        # do second fork
+        try: 
+            pid = os.fork() 
+            if pid > 0:
+                # exit from second parent, print eventual PID before
+                print "Daemon PID %d" % pid
+                sys.exit(0) 
+        except OSError, e: 
+            print >>sys.stderr, "fork #2 failed: %d (%s)" % (e.errno, e.strerror) 
+            sys.exit(1) 
+        # start the daemon main loop
+        #main()
+        runTask(LUCIFER, min = 1)    
+                
+                    
