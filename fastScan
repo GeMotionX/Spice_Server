@@ -1,0 +1,126 @@
+#!/usr/bin/env python
+
+####Created by Denny C. Ng on Mar 18, 2015
+#Copyright @Tsinghua University
+
+import sys
+import MySQLdb
+
+
+MySQLAddr = 'addr'
+MySQLUser = 'usr'
+MySQLPass = 'pass'
+MySQLDB = 'db'
+
+
+def dbGetTwitterCount():
+        db = MySQLdb.connect(MySQLAddr, MySQLUser , MySQLPass, MySQLDB)
+        cursor = db.cursor()
+        
+        sql = "SELECT COUNT(DISTINCT twitter) FROM TWIDERE"
+        try:
+           cursor.execute(sql)
+           results = cursor.fetchone()[0]
+           
+           if results is not None:
+                   return results
+           
+           return None        
+        except:
+           print "Error: unable to fecth data"
+           #database or table errors
+           return None
+        finally:
+                db.close()
+
+def dbGetUUIDCount():
+        db = MySQLdb.connect(MySQLAddr, MySQLUser , MySQLPass, MySQLDB)
+        cursor = db.cursor()
+        
+        sql = "SELECT COUNT(DISTINCT uuid) FROM TWIDERE"
+        try:
+           cursor.execute(sql)
+           results = cursor.fetchone()[0]
+           
+           if results is not None:
+                   return results
+           
+           return None        
+        except:
+           print "Error: unable to fecth data"
+           #database or table errors
+           return None
+        finally:
+                db.close()
+                
+def dbGetZombieCount():
+        db = MySQLdb.connect(MySQLAddr, MySQLUser , MySQLPass, MySQLDB)
+        cursor = db.cursor()
+        
+        sql = "SELECT COUNT(original) FROM UUIDMAP"
+        try:
+           cursor.execute(sql)
+           results = cursor.fetchone()[0]
+           
+           if results is not None:
+                   return results
+           
+           return None        
+        except:
+           print "Error: unable to fecth data"
+           #database or table errors
+           return None
+        finally:
+                db.close()
+
+def dbGetLucifer():
+        db = MySQLdb.connect(MySQLAddr, MySQLUser , MySQLPass, MySQLDB)
+        cursor = db.cursor()
+        
+        sql = "SELECT * FROM LUCIFER"
+        try:
+           cursor.execute(sql)
+           results = cursor.fetchall()
+           if results is not None:
+               for row in results:
+                       if row[2].isdigit():
+                           print '\tDevice: [' + row[1] + '] \t Twitter: [' + row[2] + ']'
+                       else:
+                           continue
+                      
+           elif results is None:
+               print None
+        except:
+           print "Error: unable to fecth data"
+           #database or table errors
+           return None
+        finally:
+                db.close()
+
+
+def operation(arg):
+    if arg == 'twitter':
+        print '\tNumber of already check-in Twitter accounts: ' + str(dbGetTwitterCount())
+    elif arg == 'uuid':
+        print '\tNumber of already check-in Devices: ' + str(dbGetTwitterCount())
+    elif arg == 'lucifer':
+        dbGetLucifer()
+    elif arg == 'zombie':
+        print '\tNumber of zombie Devices: ' + str(dbGetZombieCount())
+    elif arg == 'help':
+        print 'operation can be:\ntwitter: to see the number of check-in twitter accounts\nuuid: to see the number of check-in devices\
+        \nlucifer: to see user profiles currently in the spice/buffer\nzombie: to see the number of zombie devices'
+
+
+def main(argv):
+    if len(argv) == 1:
+        print 'use help to see the arguments'
+        return
+    else:
+        for arg in argv:
+            operation(arg)
+    
+     
+
+if __name__ == '__main__':
+    main(sys.argv)
