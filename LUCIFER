@@ -113,16 +113,16 @@ def sendMail(msg):
         s.close()
 
 def handlerTime(crTime):
-        return crTime[0:3] + '-' + crTime[4:5] + '-' + crTime[6:7] + '  ' + crTime[8:9] + ':' + crTime[10:11] + ':' + crTime[12:13] 
+        return crTime[0:4] + '-' + crTime[4:6] + '-' + crTime[6:8] + '  ' + crTime[8:10] + ':' + crTime[10:12] + ':' + crTime[12:14] 
 
 def alarm(UUID, fType, crTime):
-        return '    Device [' + UUID +  '], File [' + fType + '] received on ' + handlerTime(crTime) + '\n'
+        return '\t\t\tDevice [' + UUID +  '], File [' + fType + '] received on ' + handlerTime(crTime) + '\n\n'
 
 
 def LUCIFER():
         file_number = 0
         is_new_file = False
-        message_for_mail = 'New file received alarm: \n\n\n'
+        message_for_mail = '\tNew file received alarm: \n\n\n'
         for name in os.listdir(root):
                 if os.path.isfile(os.path.join(root,name)):
                         file_number += 1
@@ -134,7 +134,7 @@ def LUCIFER():
                                 ret = isInLUCIFER(crTime, UUID, fType)
                                 if ret is None:
                                         is_new_file = True
-                                        message_for_mail += alarm(UUID, fType)
+                                        message_for_mail += alarm(UUID, fType, crTime)
                                         dbInsert(crTime, UUID, fType)
                                                      
         if file_number == 0:
@@ -191,6 +191,6 @@ if __name__ == "__main__":
             sys.exit(1) 
         # start the daemon main loop
         #main()
-        runTask(LUCIFER, min = 1)    
+        runTask(LUCIFER, hour = 1)    
                 
                     
