@@ -315,8 +315,8 @@ def readFileinRow(mFile, storePath, fileType):
         for line in file:
             if fileType == 'Network':
                 writeFile(storePath + '/' + 'Network.txt', line)
-            elif fileType == 'onWiFi':
-                writeFile(storePath + '/' + 'onWiFi.txt', line)
+            elif fileType == 'onWifi':
+                writeFile(storePath + '/' + 'onWifi.txt', line)
             elif fileType == 'onLaunch':
                 writeFile(storePath + '/' + 'onLaunch.txt', line)
             elif fileType == 'Location':
