@@ -117,12 +117,18 @@ def handlerTime(crTime):
 
 def alarm(UUID, fType, crTime):
         return '\t\t\tDevice [' + UUID +  '], File [' + fType + '] received on ' + handlerTime(crTime) + '\n\n'
-
+        
 
 def LUCIFER():
         file_number = 0
         is_new_file = False
-        message_for_mail = '\tNew file received alarm: \n\n\n'
+        message_for_mail = ''
+        num_of_app = 0
+        num_of_network = 0
+        num_of_onwifi = 0
+        num_of_onlaunch = 0
+        num_of_location = 0
+        num_of_twitter = 0
         for name in os.listdir(root):
                 if os.path.isfile(os.path.join(root,name)):
                         file_number += 1
@@ -131,16 +137,34 @@ def LUCIFER():
                                 spiceName = name.split('-')[1]
                                 UUID = spiceName.split('_')[0]
                                 fType = spiceName.split('_')[1]
+                                if fType == 'Network':
+                                    num_of_network += 1
+                                elif fType == 'onWiFi':
+                                    num_of_onwifi += 1
+                                elif fType == 'onLaunch':
+                                    num_of_onlaunch += 1
+                                elif fType == 'Location':
+                                    num_of_location += 1
+                                elif fType == 'App':
+                                    num_of_app += 1
+                                elif fType.isdigit():
+                                    num_of_twitter += 1
+                                    
                                 ret = isInLUCIFER(crTime, UUID, fType)
                                 if ret is None:
                                         is_new_file = True
-                                        message_for_mail += alarm(UUID, fType, crTime)
                                         dbInsert(crTime, UUID, fType)
-                                                     
+                                        if fType.isdigit():
+                                                message_for_mail += alarm(UUID, fType, crTime)
+                                        
+                                        
+        
+        result_of_receiving = '\tNew file received alarm: \n\n\n\t\tMotionX server got totally %d SPICE files: %d twitter profiles, %d App files, %d Network files, %d onWiFi files, %d onLaunch files, %d Location files\n\n\tDetails of new receives:\n\n'% ( file_number, num_of_twitter, num_of_app, num_of_network, num_of_onwifi, num_of_onlaunch, num_of_location)                              
+        
         if file_number == 0:
                 dbLUCIFERClear()
         if is_new_file == True:
-                sendMail(message_for_mail)
+                sendMail(result_of_receiving + message_for_mail)
                 
 
 def runTask(func, day=0, hour=0, min=0, second=0):
