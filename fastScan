@@ -13,6 +13,8 @@ MySQLPass = 'pass'
 MySQLDB = 'db'
 
 
+root = "/home/chaowu/spice/buffer"
+
 def dbGetTwitterCount():
         db = MySQLdb.connect(MySQLAddr, MySQLUser , MySQLPass, MySQLDB)
         cursor = db.cursor()
@@ -72,6 +74,37 @@ def dbGetZombieCount():
            return None
         finally:
                 db.close()
+   
+def getSize(Sfile):
+        return os.path.getsize(Sfile)
+  
+  
+  
+def sizeof_fmt(num, suffix='B'):
+    num = int(num)
+    for unit in ['','K','M','G','T','P','E','Z']:
+        if abs(num) < 1024.0:
+            return "%3.1f%s%s" % (num, unit, suffix)
+        num /= 1024.0
+    return "%.1f%s%s" % (num, 'Yi', suffix)
+    
+           
+            
+def getProfileSize(uuid, twitter):
+        x = 23.457413902458498
+        fSize = format(x, '.3f')
+        for name in os.listdir(root):
+                if os.path.isfile(os.path.join(root,name)):
+                        if len(name.split('-')) > 1:
+                                spiceName = name.split('-')[1]
+                                if spiceName.split('_')[0] != uuid:
+                                        continue
+                                else:
+                                        if spiceName.split('_')[1] == twitter:
+                                                return sizeof_fmt(getSize(root + '/' + name))
+                                        else:
+                                                continue                                      
+        return fSize
 
 def dbGetLucifer():
         db = MySQLdb.connect(MySQLAddr, MySQLUser , MySQLPass, MySQLDB)
@@ -84,7 +117,7 @@ def dbGetLucifer():
            if results is not None:
                for row in results:
                        if row[2].isdigit():
-                           print '\tDevice: [' + row[1] + '] \t Twitter: [' + row[2] + ']'
+                           print '\tDevice: [' + row[1] + '] \t Twitter: [' + row[2] + ']\t Size: ' +str(getProfileSize(row[1], row[2]))
                        else:
                            continue
                       
