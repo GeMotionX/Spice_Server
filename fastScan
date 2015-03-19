@@ -84,14 +84,13 @@ def sizeof_fmt(num, suffix='B'):
     num = int(num)
     for unit in ['','K','M','G','T','P','E','Z']:
         if abs(num) < 1024.0:
-            return "%3.1f%s%s" % (num, unit, suffix)
+            return "%3.1f %s%s" % (num, unit, suffix)
         num /= 1024.0
-    return "%.1f%s%s" % (num, 'Yi', suffix)
+    return "%.1f %s%s" % (num, 'Yi', suffix)
     
            
             
 def getProfileSize(uuid, twitter):
-        x = 23.457413902458498
         fSize = format(x, '.3f')
         for name in os.listdir(root):
                 if os.path.isfile(os.path.join(root,name)):
@@ -104,7 +103,6 @@ def getProfileSize(uuid, twitter):
                                                 return sizeof_fmt(getSize(root + '/' + name))
                                         else:
                                                 continue                                      
-        return fSize
 
 def dbGetLucifer():
         db = MySQLdb.connect(MySQLAddr, MySQLUser , MySQLPass, MySQLDB)
@@ -130,30 +128,90 @@ def dbGetLucifer():
         finally:
                 db.close()
 
+def getTopUUID(num):
+        db = MySQLdb.connect(MySQLAddr, MySQLUser , MySQLPass, MySQLDB)
+        cursor = db.cursor()
+        
+        sql = "SELECT * FROM DEVICE_STATISTIC ORDER BY size_in_byte DESC LIMIT %d" % num 
+        try:
+           cursor.execute(sql)
+           results = cursor.fetchall()
+           if results is not None:
+                   for row in results:
+                          print row
+           elif results is None:
+               print None
+        except:
+           print "Error: unable to fecth data"
+           #database or table errors
+           return None
+        finally:
+                db.close()
+        
+        
+def getTopTwitter(num):
+        db = MySQLdb.connect(MySQLAddr, MySQLUser , MySQLPass, MySQLDB)
+        cursor = db.cursor()
+        
+        sql = "SELECT * FROM TWITTER_STATISTIC ORDER BY size_in_byte DESC LIMIT %d" % num
+        try:
+           cursor.execute(sql)
+           results = cursor.fetchall()
+           if results is not None:
+               for row in results:
+                       print row
+           elif results is None:
+               print None
+        except:
+           print "Error: unable to fecth data"
+           #database or table errors
+           return None
+        finally:
+                db.close()
+
+
+def getTop(action, rang):
+        if action == 'dev':
+                num = dbGetUUIDCount()
+                if rang > num:
+                        print 'only %d devices have checked-in, the following is in the range of %d.' % (num, num)
+                        rang = num
+                getTopUUID(rang)
+        elif action == 'acc':
+                num = dbGetTwitterCount()
+                if rang > num:
+                        print 'only %d twitter accounts have checked-in, the following is in the range of %d.' % (num, num)
+                        rang = num
+                getTopTwitter(rang)                      
+
+
 
 def operation(arg):
     if arg == 'twitter':
         print '\tNumber of already check-in Twitter accounts: ' + str(dbGetTwitterCount())
     elif arg == 'uuid':
-        print '\tNumber of already check-in Devices: ' + str(dbGetTwitterCount())
+        print '\tNumber of already check-in Devices: ' + str(dbGetUUIDCount())
     elif arg == 'lucifer':
         dbGetLucifer()
     elif arg == 'zombie':
         print '\tNumber of zombie Devices: ' + str(dbGetZombieCount())
     elif arg == 'help':
         print 'operation can be:\ntwitter: to see the number of check-in twitter accounts\nuuid: to see the number of check-in devices\
-        \nlucifer: to see user profiles currently in the spice/buffer\nzombie: to see the number of zombie devices'
-
-
+        \nlucifer: to see user profiles currently in the spice/buffer\nzombie: to see the number of zombie devices'                
+        
+        
 def main(argv):
     if len(argv) == 1:
-        print 'use help to see the arguments'
-        return
-    else:
-        for arg in argv:
-            operation(arg)
-    
-     
+            print 'use help to see the arguments'
+            return
 
+    for arg in argv:
+            if arg == 'top':
+                    if argv[3]== 'dev' or argv[3] == 'acc':
+                            getTop(str(argv[3]), int(argv[2]))
+            else:
+                    operation(arg)
+      
+    
 if __name__ == '__main__':
     main(sys.argv)
