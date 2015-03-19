@@ -123,8 +123,8 @@ def isDeviceExist(uuid):
         db = MySQLdb.connect(MySQLAddr, MySQLUser , MySQLPass, MySQLDB)
         cursor = db.cursor()
         
-        sql = "SELECT * FROM DEVICE_STATISTIC \
-               WHERE device = '%s'" % (uuid)
+        sql = "SELECT * FROM TWIDERE \
+               WHERE uuid = '%s'" % (uuid)
         try:
            cursor.execute(sql)
            results = cursor.fetchall()
@@ -141,12 +141,12 @@ def isDeviceExist(uuid):
                 db.close()
     
                 
-def isTwitterExist(twitter, uuid):
+def isTwitterExist(twitter):
         db = MySQLdb.connect(MySQLAddr, MySQLUser , MySQLPass, MySQLDB)
         cursor = db.cursor()
         
-        sql = "SELECT * FROM TWITTER_STATISTIC \
-               WHERE twitter = '%s' AND in_device = '%s'" % (twitter, uuid)
+        sql = "SELECT * FROM TWIDERE \
+               WHERE twitter = '%s'" % (twitter)
         try:
            cursor.execute(sql)
            results = cursor.fetchall()
@@ -252,7 +252,11 @@ def sizeof_fmt(num, suffix='B'):
         num /= 1024.0
     return "%.1f %s%s" % (num, 'Yi', suffix)
     
-           
+
+def getSize(Sfile):
+        return os.path.getsize(Sfile)
+
+          
             
 def getProfileSize(uuid, twitter):
         for name in os.listdir(root):
@@ -271,14 +275,14 @@ def getProfileSize(uuid, twitter):
 def alarm(UUID, fType, crTime, isUUID, isTwitter):
         if isUUID is None:
                 if isTwitter is None:
-                        return '\t\t\tNew Check-in Device [' + UUID +  ']! and New Check-in Twitter [' + fType + '] ! They were received on ' + handlerTime(crTime) + '\tfile size: '+ getProfileSize(UUID,fType) + '\n\n'
+                        return '\t\tNew Check-in Device [' + UUID +  ']! and New Check-in Twitter [' + fType + '] ! They were received on ' + handlerTime(crTime) + '\tfile size: '+ str(getProfileSize(UUID,fType)) + '\n\n'
                 else:
-                        return '\t\t\tNew Check-in Device [' + UUID +  ']! but already Checked-in Twitter [' + fType + '] ! They were received on ' + handlerTime(crTime) + '\tfile size: '+ getProfileSize(UUID,fType) + '\n\n'
+                        return '\t\tNew Check-in Device [' + UUID +  ']! but already Checked-in Twitter [' + fType + '] ! They were received on ' + handlerTime(crTime) + '\tfile size: '+ str(getProfileSize(UUID,fType)) + '\n\n'
         else:
                 if isTwitter is None:
-                        return '\t\t\tAlready Checked-in Device [' + UUID +  ']! but New Check-in Twitter [' + fType + '] ! They were received on ' + handlerTime(crTime) + '\tfile size: '+ getProfileSize(UUID,fType) + '\n\n'
+                        return '\t\tAlready Checked-in Device [' + UUID +  ']! but New Check-in Twitter [' + fType + '] ! They were received on ' + handlerTime(crTime) + '\tfile size: '+ str(getProfileSize(UUID,fType)) + '\n\n'
                 else:
-                        return '\t\t\tAlready Checked-in Device [' + UUID +  ']! and already Checked-in Twitter [' + fType + '] ! They were received on ' + handlerTime(crTime) + '\tfile size: '+ getProfileSize(UUID,fType) + '\n\n'
+                        return '\t\tAlready Checked-in Device [' + UUID +  ']! and already Checked-in Twitter [' + fType + '] ! They were received on ' + handlerTime(crTime) + '\tfile size: '+ str(getProfileSize(UUID,fType)) + '\n\n'
      
         
 
@@ -322,13 +326,14 @@ def LUCIFER():
                                                 message_for_mail += alarm(UUID, fType, crTime, isDeviceExist(UUID), isTwitterExist(fType))
                                         
                                         
-        result_of_receiving = 'Until yesterday, there are already %d devices and %d twitter accounts join twidere-spice, but %d zombie devices\n' % (dbGetUUIDCount(), dbGetTwitterCount(), dbGetZombieCount() )
-        result_of_receiving += '\tNew file received alarm: \n\n\n\t\tSpice server got totally %d SPICE files up to now today: including %d user profiles, %d App recording files, %d Network recording files, %d onWiFi recording files, %d onLaunch recording files, and %d Location recording files\n\n\tDetails of new receives:\n\n'% ( file_number, num_of_twitter, num_of_app, num_of_network, num_of_onwifi, num_of_onlaunch, num_of_location)                              
+        
         
         if file_number == 0 or file_number < exist_file:
                 dbLUCIFERClear()
         if is_new_file == True:
-                sendMail(result_of_receiving + message_for_mail)
+                result_of_receiving = 'Until yesterday, there are already %d devices and %d twitter accounts join twidere-spice, but %d zombie devices.\n\n' % (dbGetUUIDCount(), dbGetTwitterCount(), dbGetZombieCount() )
+                file_of_receiving = '\tNew file received alarm: \n\n\t\tSpice server got totally %d SPICE files up to now today: including %d user profiles, %d App recording files, %d Network recording files, %d onWiFi recording files, %d onLaunch recording files, and %d Location recording files.\n\n\tDetails of new receives:\n\n'% ( file_number, num_of_twitter, num_of_app, num_of_network, num_of_onwifi, num_of_onlaunch, num_of_location)
+                sendMail(result_of_receiving + file_of_receiving + message_for_mail)
                 
 
 def runTask(func, day=0, hour=0, min=0, second=0):
@@ -379,6 +384,6 @@ if __name__ == "__main__":
             sys.exit(1) 
         # start the daemon main loop
         #main()
-        runTask(LUCIFER, min = 10)    
+        runTask(LUCIFER, hour = 1)    
                 
                     
