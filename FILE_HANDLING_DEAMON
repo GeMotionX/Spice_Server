@@ -367,11 +367,27 @@ def typeHandler(uuid):
         else:
                 return twitter
 
-def isProfile(fileType):
-        if fileType == 'App' or fileType == 'Location' or fileType == 'Network' or fileType == 'onLaunch' or fileType == 'onWifi' or fileType == 'EXP':
+def regular(target):
+        ret = re.match(r'^(\w+)$', target)
+        if ret is None:
                 return False
-        else:
+        return True
+
+def isProfileValid(fName):
+        Fformat = fName.split('.')[1]
+        if Fformat != 'spi':
+                return False
+        if fName.count('-') != 1:
+                return False
+        fileName = fName.split('-')[1]
+        machineUUID = fileName.split('_')[0]
+        if regular(machineUUID) == False:
+                return False
+        fileType = fileName.split('_')[1]
+        if fileType == 'App' or fileType == 'Location' or fileType == 'Network' or fileType == 'onLaunch' or fileType == 'onWifi' or fileType == 'EXP' or fileType.isdigit():
                 return True
+        else:
+                return False
 
 
 def SOURCE_FILE_HANDLE():
@@ -381,13 +397,16 @@ def SOURCE_FILE_HANDLE():
             if os.path.isfile(os.path.join(root,name)):
                 if len(name.split('-')) > 1:
                     log('[handle file in buffer folder]: ' + name)
+                    if isProfileValid(name) == False:
+                            fileMoveToUnknownDirectly(name)
+                            continue
                     fileTime = name.split('-')[0]
                     fileName = name.split('-')[1]
                     machineUUID = fileName.split('_')[0]
                    
                     #isPathExist(spiceRoot, machineUUID)
                     fileType = fileName.split('_')[1]
-                    if machineUUID == 'unknown':
+                    if machineUUID == 'unknown' or machineUUID == 'null':
                             fileMoveToUnknownDirectly(name)
                             continue
                     #get accurate UUID from MySQL database Table TWIDERE
