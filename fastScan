@@ -188,8 +188,12 @@ def main(argv):
             return
     for arg in argv:
             if arg == 'top':
-                    if argv[3]== 'dev' or argv[3] == 'acc':
-                            getTop(str(argv[3]), int(argv[2]))
+                    try:
+                            if argv[3]== 'dev' or argv[3] == 'acc':
+                                    getTop(str(argv[3]), int(argv[2]))
+                    except: 
+                            print 'Parameters error!'
+                    
             elif arg == 'LUCIFER':
                     os.system("python /home/chaowu/deamons/LUCIFER/LUCIFER.py")
             elif arg == 'FILE':
