@@ -91,7 +91,6 @@ def sizeof_fmt(num, suffix='B'):
            
             
 def getProfileSize(uuid, twitter):
-        fSize = format(x, '.3f')
         for name in os.listdir(root):
                 if os.path.isfile(os.path.join(root,name)):
                         if len(name.split('-')) > 1:
@@ -104,29 +103,13 @@ def getProfileSize(uuid, twitter):
                                         else:
                                                 continue                                      
 
-def dbGetLucifer():
-        db = MySQLdb.connect(MySQLAddr, MySQLUser , MySQLPass, MySQLDB)
-        cursor = db.cursor()
-        
-        sql = "SELECT * FROM LUCIFER"
-        try:
-           cursor.execute(sql)
-           results = cursor.fetchall()
-           if results is not None:
-               for row in results:
-                       if row[2].isdigit():
-                           print '\tDevice: [' + row[1] + '] \t Twitter: [' + row[2] + ']\t Size: ' +str(getProfileSize(row[1], row[2]))
-                       else:
-                           continue
-                      
-           elif results is None:
-               print None
-        except:
-           print "Error: unable to fecth data"
-           #database or table errors
-           return None
-        finally:
-                db.close()
+def getBuffer():
+        for name in os.listdir(root):
+                if os.path.isfile(os.path.join(root,name)):
+                        if len(name.split('-')) > 1:
+                                spiceName = name.split('-')[1]
+                                if spiceName.split('_')[1].isdigit():
+                                        print '\tDevice: [' + spiceName.split('_')[0] + '] \t Twitter: [' + spiceName.split('_')[1] + ']\t Size: ' +str(getProfileSize(spiceName.split('_')[0], spiceName.split('_')[1]))
 
 def getTopUUID(num):
         db = MySQLdb.connect(MySQLAddr, MySQLUser , MySQLPass, MySQLDB)
@@ -183,32 +166,36 @@ def getTop(action, rang):
                         print 'only %d twitter accounts have checked-in, the following is in the range of %d.' % (num, num)
                         rang = num
                 getTopTwitter(rang)                      
-
-
+                
 
 def operation(arg):
     if arg == 'twitter':
         print '\tNumber of already check-in Twitter accounts: ' + str(dbGetTwitterCount())
     elif arg == 'uuid':
         print '\tNumber of already check-in Devices: ' + str(dbGetUUIDCount())
-    elif arg == 'lucifer':
-        dbGetLucifer()
+    elif arg == 'buffer':
+        getBuffer()
     elif arg == 'zombie':
         print '\tNumber of zombie Devices: ' + str(dbGetZombieCount())
     elif arg == 'help':
         print 'operation can be:\ntwitter: to see the number of check-in twitter accounts\nuuid: to see the number of check-in devices\
-        \nlucifer: to see user profiles currently in the spice/buffer\nzombie: to see the number of zombie devices'                
+        \nbuffer: to see user profiles currently in the spice/buffer\nzombie: to see the number of zombie devices'                
         
         
 def main(argv):
     if len(argv) == 1:
             print 'use help to see the arguments'
             return
-
     for arg in argv:
             if arg == 'top':
                     if argv[3]== 'dev' or argv[3] == 'acc':
                             getTop(str(argv[3]), int(argv[2]))
+            elif arg == 'LUCIFER':
+                    os.system("python /home/chaowu/deamons/LUCIFER/LUCIFER.py")
+            elif arg == 'FILE':
+                    os.system("python /home/chaowu/deamons/FileHandler/FILE_HANDLER.py")
+            elif arg == 'STAT':
+                    os.system("python /home/chaowu/deamons/StatisticHandler/Statistic_handler.py") 
             else:
                     operation(arg)
       
