@@ -13,6 +13,9 @@ MySQLPass = 'pass'
 MySQLDB = 'db'
 
 
+sys.path.insert(0,"/home/chaowu/deamons/FileHandler")
+from spiValidation import isFileValide as validation
+
 root = "/home/chaowu/spice/buffer"
 
 def dbGetTwitterCount():
@@ -106,10 +109,12 @@ def getProfileSize(uuid, twitter):
 def getBuffer():
         for name in os.listdir(root):
                 if os.path.isfile(os.path.join(root,name)):
-                        if len(name.split('-')) > 1:
-                                spiceName = name.split('-')[1]
-                                if spiceName.split('_')[1].isdigit():
-                                        print '\tDevice: [' + spiceName.split('_')[0] + '] \t Twitter: [' + spiceName.split('_')[1] + ']\t Size: ' +str(getProfileSize(spiceName.split('_')[0], spiceName.split('_')[1]))
+                    if validation(name) == True:
+                        spiceName = name.split('-')[1]
+                        print '\tDevice: [' + spiceName.split('_')[0] + '] \t Twitter: [' + spiceName.split('_')[1] + ']\t Size: ' +str(getProfileSize(spiceName.split('_')[0], spiceName.split('_')[1]))
+                    else:
+                        print '\tMalicious file: ' + name
+                                
 
 def getTopUUID(num):
         db = MySQLdb.connect(MySQLAddr, MySQLUser , MySQLPass, MySQLDB)
