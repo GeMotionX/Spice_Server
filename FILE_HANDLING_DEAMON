@@ -9,6 +9,8 @@ import sys, os, os.path, shutil
 from datetime import date, time, datetime, timedelta
 import time
 
+from spiValidation import isFileValide as validation
+
 import MySQLdb
 
 
@@ -19,6 +21,7 @@ spiceRoot = "/home/chaowu/data/spice/usage_statistics"
 backupRoot = "/home/chaowu/data/spice/source_files"
 waitingRoot = "/home/chaowu/spice/waiting"
 unknownRoot = "/home/chaowu/data/spice/unknown_files"
+maliciousRoot = "/home/chaowu/data/spice/malicious_files"
 experimentRoot = '/home/chaowu/data/spice/experiment'
 
 MySQLAddr = 'addr'
@@ -354,11 +357,12 @@ def fileMoveToUnknownDirectly(profile):
         shutil.copyfile(root + '/' + profile, backupRoot + '/' + profile)
         shutil.copyfile(root + '/' + profile, unknownRoot + '/' + profile)       
         os.remove(root + '/' + profile)
+        
+def maliciousDefence(profile):
+        log('[remove malicious file directly]: ' + profile)
+        shutil.copyfile(root + '/' + profile, maliciousRoot + '/' + profile)
+        os.remove(root + '/' + profile)
 
-    
-#def receivingExpFiles(profile):
- #       shutil.copyfile(root + '/' + profile, experimentRoot + '/' + profile)
-  #      os.remove(root + '/' + profile)
 
 def typeHandler(uuid):
         twitter = getTwitterByUUID(uuid)
@@ -367,38 +371,14 @@ def typeHandler(uuid):
         else:
                 return twitter
 
-def regular(target):
-        ret = re.match(r'^(\w+)$', target)
-        if ret is None:
-                return False
-        return True
-
-def isProfileValid(fName):
-        Fformat = fName.split('.')[1]
-        if Fformat != 'spi':
-                return False
-        if fName.count('-') != 1:
-                return False
-        fileName = fName.split('-')[1]
-        machineUUID = fileName.split('_')[0]
-        if regular(machineUUID) == False:
-                return False
-        fileType = fileName.split('_')[1]
-        if fileType == 'App' or fileType == 'Location' or fileType == 'Network' or fileType == 'onLaunch' or fileType == 'onWifi' or fileType == 'EXP' or fileType.isdigit():
-                return True
-        else:
-                return False
-
 
 def SOURCE_FILE_HANDLE():
-        #isPathExist(spiceRoot, 'SourceFile')
-        
         for name in os.listdir(root):
             if os.path.isfile(os.path.join(root,name)):
                 if len(name.split('-')) > 1:
                     log('[handle file in buffer folder]: ' + name)
-                    if isProfileValid(name) == False:
-                            fileMoveToUnknownDirectly(name)
+                    if validation(name) == False:
+                            maliciousDefence(name)
                             continue
                     fileTime = name.split('-')[0]
                     fileName = name.split('-')[1]
@@ -410,7 +390,7 @@ def SOURCE_FILE_HANDLE():
                             fileMoveToUnknownDirectly(name)
                             continue
                     #get accurate UUID from MySQL database Table TWIDERE
-                    if fileType == 'App' or fileType == 'Location' or fileType == 'Network' or fileType == 'onLaunch' or fileType == 'onWifi' or fileType == 'EXP':
+                    if fileType == 'App' or fileType == 'Location' or fileType == 'Network' or fileType == 'onLaunch' or fileType == 'onWifi':
                            ret_of_UUID =  typeHandler(machineUUID)
                            if ret_of_UUID is not None:
                                    pass
@@ -536,4 +516,4 @@ if __name__ == "__main__":
             sys.exit(1) 
         # start the daemon main loop
         #main()
-        runTask(SOURCE_FILE_HANDLE, day = 1)
+        runTask(SOURCE_FILE_HANDLE, hour = 12)
