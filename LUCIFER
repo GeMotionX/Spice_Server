@@ -28,7 +28,6 @@ MySQLDB = 'db'
 _user = "xxx@xxx.xx"
 _pwd  = "xxx"
 _to   = "GeMotionX@gmail.com"
-_cc   = "twidere.project@gmail.com"
 
 ############### MYSQL DATABASE  HANDELER SOURCE CODE ####################
 
@@ -232,11 +231,10 @@ def sendMail(msg):
         msg["Subject"] = '[' + datetime.now().strftime('%Y-%m-%d %H:%M:%S') + '] Spice Server Reports'
         msg["From"]    = _user
         msg["To"]      = _to
-        msg["CC"]      = _cc
 
         s = smtplib.SMTP("smtp.qq.com", timeout=30)
         s.login(_user, _pwd)
-        s.sendmail(_user, [_to,_cc], msg.as_string())
+        s.sendmail(_user, _to, msg.as_string())
         s.close()
         
 
@@ -275,14 +273,14 @@ def getProfileSize(uuid, twitter):
 def alarm(UUID, fType, crTime, isUUID, isTwitter):
         if isUUID is None:
                 if isTwitter is None:
-                        return '\t\tNew Check-in Device [' + UUID +  ']! and New Check-in Twitter [' + fType + '] ! They were received on ' + handlerTime(crTime) + '\tfile size: '+ str(getProfileSize(UUID,fType)) + '\n\n'
+                        return '\t\tNew Check-in Device [' + UUID +  ']! and New Check-in Twitter [' + fType + '] ! Received on ' + handlerTime(crTime) + '\tfile size: '+ str(getProfileSize(UUID,fType)) + '\n\n'
                 else:
-                        return '\t\tNew Check-in Device [' + UUID +  ']! but already Checked-in Twitter [' + fType + '] ! They were received on ' + handlerTime(crTime) + '\tfile size: '+ str(getProfileSize(UUID,fType)) + '\n\n'
+                        return '\t\tNew Check-in Device [' + UUID +  ']! but already Checked-in Twitter [' + fType + '] ! Received on ' + handlerTime(crTime) + '\tfile size: '+ str(getProfileSize(UUID,fType)) + '\n\n'
         else:
                 if isTwitter is None:
-                        return '\t\tAlready Checked-in Device [' + UUID +  ']! but New Check-in Twitter [' + fType + '] ! They were received on ' + handlerTime(crTime) + '\tfile size: '+ str(getProfileSize(UUID,fType)) + '\n\n'
+                        return '\t\tAlready Checked-in Device [' + UUID +  ']! but New Check-in Twitter [' + fType + '] ! Received on ' + handlerTime(crTime) + '\tfile size: '+ str(getProfileSize(UUID,fType)) + '\n\n'
                 else:
-                        return '\t\tAlready Checked-in Device [' + UUID +  ']! and already Checked-in Twitter [' + fType + '] ! They were received on ' + handlerTime(crTime) + '\tfile size: '+ str(getProfileSize(UUID,fType)) + '\n\n'
+                        return '\t\tAlready Checked-in Device [' + UUID +  ']! and already Checked-in Twitter [' + fType + '] ! Received on ' + handlerTime(crTime) + '\tfile size: '+ str(getProfileSize(UUID,fType)) + '\n\n'
      
         
 
@@ -297,34 +295,38 @@ def LUCIFER():
         num_of_location = 0
         num_of_twitter = 0
         exist_file = dbGetCount()
+        malicious_info = '\n\tThe Following might be the malicous files: '
         for name in os.listdir(root):
                 if os.path.isfile(os.path.join(root,name)):
                         file_number += 1
-                        if len(name.split('-')) > 1:
-                                crTime = name.split('-')[0]
-                                spiceName = name.split('-')[1]
-                                UUID = spiceName.split('_')[0]
-                                fType = spiceName.split('_')[1]
-                                if fType == 'Network':
-                                    num_of_network += 1
-                                elif fType == 'onWifi':
-                                    num_of_onwifi += 1
-                                elif fType == 'onLaunch':
-                                    num_of_onlaunch += 1
-                                elif fType == 'Location':
-                                    num_of_location += 1
-                                elif fType == 'App':
-                                    num_of_app += 1
-                                elif fType.isdigit():
-                                    num_of_twitter += 1
+                        try:
+                            if len(name.split('-')) > 1:
+                                    crTime = name.split('-')[0]
+                                    spiceName = name.split('-')[1]
+                                    UUID = spiceName.split('_')[0]
+                                    fType = spiceName.split('_')[1]
+                                    if fType == 'Network':
+                                        num_of_network += 1
+                                    elif fType == 'onWifi':
+                                        num_of_onwifi += 1
+                                    elif fType == 'onLaunch':
+                                        num_of_onlaunch += 1
+                                    elif fType == 'Location':
+                                        num_of_location += 1
+                                    elif fType == 'App':
+                                        num_of_app += 1
+                                    elif fType.isdigit():
+                                        num_of_twitter += 1
                                     
-                                ret = isInLUCIFER(crTime, UUID, fType)
-                                if ret is None:
-                                        is_new_file = True
-                                        dbInsert(crTime, UUID, fType)
-                                        if fType.isdigit():
-                                                message_for_mail += alarm(UUID, fType, crTime, isDeviceExist(UUID), isTwitterExist(fType))
-                                        
+                                    ret = isInLUCIFER(crTime, UUID, fType)
+                                    if ret is None:
+                                            is_new_file = True
+                                            dbInsert(crTime, UUID, fType)
+                                            if fType.isdigit():
+                                                    message_for_mail += alarm(UUID, fType, crTime, isDeviceExist(UUID), isTwitterExist(fType))
+                        except:
+                            malicious_info = malicious_info + name + '||'
+                            continue
                                         
         
         
@@ -333,7 +335,7 @@ def LUCIFER():
         if is_new_file == True:
                 result_of_receiving = 'Until yesterday, there are already %d devices and %d twitter accounts join twidere-spice, but %d zombie devices.\n\n' % (dbGetUUIDCount(), dbGetTwitterCount(), dbGetZombieCount() )
                 file_of_receiving = '\tNew file received alarm: \n\n\t\tSpice server got totally %d SPICE files up to now today: including %d user profiles, %d App recording files, %d Network recording files, %d onWiFi recording files, %d onLaunch recording files, and %d Location recording files.\n\n\tDetails of new receives:\n\n'% ( file_number, num_of_twitter, num_of_app, num_of_network, num_of_onwifi, num_of_onlaunch, num_of_location)
-                sendMail(result_of_receiving + file_of_receiving + message_for_mail)
+                sendMail(result_of_receiving + file_of_receiving + message_for_mail + malicious_info)
                 
 
 def runTask(func, day=0, hour=0, min=0, second=0):
